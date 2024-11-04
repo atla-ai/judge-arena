@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2024-11-04T21:29:32.443354",
+    "prompt": "test",
+    "response_a": "Hello! How can I assist you today?",
+    "response_b": "It looks like you're just testing the system. Is there anything else I can help you with, or would you like to start a conversation or ask a question?",
+    "model_a": "claude-3-opus-20240229",
+    "model_b": "Meta Llama 3.1 8B Instruct Turbo",
+    "winner": "A",
+    "judge_id": "user1"
+  }
+]

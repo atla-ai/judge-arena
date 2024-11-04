@@ -1,0 +1,2 @@
+import{a as i,i as p,s as c,Q as o,q as e,l as m,v as d,w as l,o as h}from"../lite.js";function u(n){let t,s;return{c(){t=o("svg"),s=o("path"),e(s,"fill","currentColor"),e(s,"d","m31 16l-7 7l-1.41-1.41L28.17 16l-5.58-5.59L24 9l7 7zM1 16l7-7l1.41 1.41L3.83 16l5.58 5.59L8 23l-7-7zm11.42 9.484L17.64 6l1.932.517L14.352 26z"),e(t,"width","100%"),e(t,"height","100%"),e(t,"viewBox","0 0 32 32")},m(a,r){m(a,t,r),d(t,s)},p:l,i:l,o:l,d(a){a&&h(t)}}}class v extends i{constructor(t){super(),p(this,t,null,u,c,{})}}export{v as C};
+//# sourceMappingURL=Code-BsaWGhrX.js.map

@@ -1,0 +1,18 @@
+<script>import { createEventDispatcher } from "svelte";
+export let elem_classes = [];
+export let value;
+export let visible = true;
+const dispatch = createEventDispatcher();
+$:
+  value, dispatch("change");
+</script>
+
+<div class="prose {elem_classes.join(' ')}" class:hide={!visible}>
+	{@html value}
+</div>
+
+<style>
+	.hide {
+		display: none;
+	}
+</style>
