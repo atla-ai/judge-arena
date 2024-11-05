@@ -1,12 +1,12 @@
 [
   {
-    "timestamp": "2024-11-04T21:29:32.443354",
-    "prompt": "test",
-    "response_a": "Hello! How can I assist you today?",
-    "response_b": "It looks like you're just testing the system. Is there anything else I can help you with, or would you like to start a conversation or ask a question?",
-    "model_a": "claude-3-opus-20240229",
+    "timestamp": "2024-11-05T22:03:03.827317",
+    "prompt": "You are assessing a chat bot response to a user's input based on the helpfulness of the response.\n                    \nScore:\nA score of 1 means that the response's answer meets all of the evaluation criteria.\nA score of 0 means that the response's answer does not meet all of the evaluation criteria.\nHere is the data:\n\n[BEGIN DATA]\n***\n[User Query]: {{input}}\n***\n[Response]: {{response}}\n***\n[END DATA]",
+    "response_a": "0",
+    "response_b": "0.5",
+    "model_a": "GPT-3.5 Turbo",
     "model_b": "Meta Llama 3.1 8B Instruct Turbo",
-    "winner": "A",
+    "winner": "Tie",
     "judge_id": "user1"
   }
 ]

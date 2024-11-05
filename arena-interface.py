@@ -26,12 +26,36 @@ together_client = Together()  # No API key needed in constructor
 elo_scores = defaultdict(lambda: 1500)
 vote_counts = defaultdict(int)
 model_data = {
-    'gpt-4o': {'organization': 'OpenAI', 'license': 'Proprietary'},
-    'gpt-4o-mini': {'organization': 'OpenAI', 'license': 'Proprietary'},
-    'gpt-3.5-turbo': {'organization': 'OpenAI', 'license': 'Proprietary'},
-    'claude-3-5-haiku-20241022': {'organization': 'Anthropic', 'license': 'Proprietary'},
-    'claude-3-5-sonnet-20241022': {'organization': 'Anthropic', 'license': 'Proprietary'},
-    'claude-3-opus-20240229': {'organization': 'Anthropic', 'license': 'Proprietary'},
+    'GPT-4o': {
+        'organization': 'OpenAI',
+        'license': 'Proprietary',
+        'api_model': 'gpt-4o'
+    },
+    'GPT-4 Turbo': {
+        'organization': 'OpenAI',
+        'license': 'Proprietary',
+        'api_model': 'gpt-4-turbo'
+    },
+    'GPT-3.5 Turbo': {
+        'organization': 'OpenAI',
+        'license': 'Proprietary',
+        'api_model': 'gpt-3.5-turbo'
+    },
+    'Claude 3 Haiku': {
+        'organization': 'Anthropic',
+        'license': 'Proprietary',
+        'api_model': 'claude-3-haiku-20240307'
+    },
+    'Claude 3 Sonnet': {
+        'organization': 'Anthropic',
+        'license': 'Proprietary',
+        'api_model': 'claude-3-sonnet-20240229'
+    },
+    'Claude 3 Opus': {
+        'organization': 'Anthropic',
+        'license': 'Proprietary',
+        'api_model': 'claude-3-opus-20240229'
+    },
     'Meta Llama 3.1 8B Instruct Turbo': {
         'organization': 'Meta', 
         'license': 'Open Source',
@@ -83,12 +107,15 @@ def get_final_prompt(eval_prompt, variable_values):
         eval_prompt = eval_prompt.replace('{{' + var + '}}', val)
     return eval_prompt
 
+# Add this near the top with other constants
+SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction. Your output format should be a JSON as follows: {{"feedback": "(write a feedback for the evaluation criteria)", "result": "(a score based on the evaluation criteria)"}}"""
+
 def get_openai_response(model_name, prompt):
     try:
         response = openai_client.chat.completions.create(
             model=model_name,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -102,7 +129,7 @@ def get_anthropic_response(model_name, prompt):
             model=model_name,
             max_tokens=1000,
             temperature=0,
-            system="You are a helpful assistant.",
+            system=SYSTEM_PROMPT,
             messages=[
                 {"role": "user", "content": [{"type": "text", "text": prompt}]}
             ]
@@ -112,14 +139,24 @@ def get_anthropic_response(model_name, prompt):
         return f"Error with Anthropic model {model_name}: {str(e)}"
 
 def get_model_response(model_name, prompt):
-    if model_name.startswith('gpt'):
-        return get_openai_response(model_name, prompt)
-    elif model_name.startswith('claude'):
-        return get_anthropic_response(model_name, prompt)
-    elif model_name in model_data and 'api_model' in model_data[model_name]:
-        return get_together_response(model_data[model_name]['api_model'], prompt)
-    else:
+    model_info = model_data.get(model_name)
+    if not model_info:
         return "Model not found or unsupported."
+    
+    api_model = model_info['api_model']
+    organization = model_info['organization']
+    
+    try:
+        if organization == 'OpenAI':
+            return get_openai_response(api_model, prompt)
+        elif organization == 'Anthropic':
+            return get_anthropic_response(api_model, prompt)
+        elif organization == 'Meta':
+            return get_together_response(api_model, prompt)
+        else:
+            return "Organization not supported."
+    except Exception as e:
+        return f"Error with {organization} model {model_name}: {str(e)}"
 
 def submit_prompt(eval_prompt, *variable_values):
     try:
@@ -181,12 +218,14 @@ def vote(choice, model_a, model_b, prompt, response_a, response_b, judge_id):
     # Store the vote data
     store_vote_data(prompt, response_a, response_b, model_a, model_b, choice, judge_id)
 
-    # Return updates for vote buttons and model names
-    return [
-        gr.update(visible=False),  # action_buttons_row
-        gr.update(value=f"*Model: {model_a}*"),  # model_name_a
-        gr.update(value=f"*Model: {model_b}*")   # model_name_b
-    ]
+    # Return updates for UI components
+    return {
+        action_buttons_row: gr.update(visible=False),
+        model_name_a: gr.update(value=f"*Model: {model_a}*"),
+        model_name_b: gr.update(value=f"*Model: {model_b}*"),
+        send_btn: gr.update(interactive=True),
+        regenerate_button: gr.update(visible=True, interactive=True)
+    }
 
 def get_leaderboard():
     # Generate leaderboard data
@@ -208,7 +247,6 @@ def get_leaderboard():
     return leaderboard
 
 def regenerate_prompt(model_a, model_b, eval_prompt, *variable_values):
-    # Similar to submit_prompt but with guaranteed different models
     variables = parse_variables(eval_prompt)
     variable_values_dict = {var: val for var, val in zip(variables, variable_values)}
     final_prompt = get_final_prompt(eval_prompt, variable_values_dict)
@@ -226,14 +264,20 @@ def regenerate_prompt(model_a, model_b, eval_prompt, *variable_values):
     response_a = get_model_response(model1, final_prompt)
     response_b = get_model_response(model2, final_prompt)
 
+    # Parse the responses
+    score_a, critique_a = parse_model_response(response_a)
+    score_b, critique_b = parse_model_response(response_b)
+
     return (
-        response_a,
-        response_b,
-        gr.update(visible=True),  # Show voting buttons
-        gr.update(value="*Model: Unknown*"),  # Hide model A name
-        gr.update(value="*Model: Unknown*"),  # Hide model B name
-        model1,  # Return new model_a for state
-        model2   # Return new model_b for state
+        score_a,              # score_a textbox
+        critique_a,           # critique_a textbox
+        score_b,              # score_b textbox
+        critique_b,           # critique_b textbox
+        gr.update(visible=True),  # action_buttons_row
+        gr.update(value="*Model: Unknown*"),  # model_name_a
+        gr.update(value="*Model: Unknown*"),  # model_name_b
+        model1,              # model_a_state
+        model2               # model_b_state
     )
 
 # Add these constants at the top of your file
@@ -300,11 +344,12 @@ def update_leaderboard():
     leaderboard_data = []
     for model in model_data.keys():  # Only include current models
         win_rate = (wins[model] / matches[model] * 100) if matches[model] > 0 else 0
+        ci = 1.96 * (400 / (matches[model] + 1) ** 0.5) if matches[model] > 0 else 0  # Confidence interval
         leaderboard_data.append({
             'Model': model,
             'ELO': round(ratings[model], 1),
+            '95% CI': f"±{ci:.1f}",
             'Matches': matches[model],
-            'Wins': wins[model],
             'Win Rate': f"{win_rate:.1f}%",
             'Organization': model_data[model]['organization'],
             'License': model_data[model]['license']
@@ -314,22 +359,28 @@ def update_leaderboard():
     df = pd.DataFrame(leaderboard_data)
     return df.sort_values('ELO', ascending=False).reset_index(drop=True)
 
-# Update your display_leaderboard function
+# Update the display_leaderboard function
 def display_leaderboard():
     df = update_leaderboard()
     return gr.DataFrame(
         value=df,
-        headers=['Model', 'ELO', 'Matches', 'Wins', 'Win Rate', 'Organization', 'License'],
-        datatype=['str', 'number', 'number', 'number', 'str', 'str', 'str'],
+        headers=['Model', 'ELO', '95% CI', 'Matches', 'Organization', 'License'],
+        datatype=['str', 'number', 'str', 'number', 'str', 'str', 'str'],
         row_count=(len(df) + 1, 'dynamic'),
     )
+
+# Update the leaderboard table definition in the UI
+leaderboard_table = gr.Dataframe(
+    headers=['Model', 'ELO', '95% CI', 'Matches', 'Organization', 'License'],
+    datatype=['str', 'number', 'str', 'number', 'str', 'str', 'str']
+)
 
 def get_together_response(model_name, prompt):
     try:
         response = together_client.chat.completions.create(
             model=model_name,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
             ],
             stream=False
@@ -338,65 +389,155 @@ def get_together_response(model_name, prompt):
     except Exception as e:
         return f"Error with Together model {model_name}: {str(e)}"
 
+def parse_model_response(response):
+    try:
+        # Parse JSON response
+        data = json.loads(response)
+        return data.get('result', 'N/A'), data.get('feedback', 'N/A')
+    except:
+        # If JSON parsing fails, return original response
+        return 'Error', response
+
 with gr.Blocks(theme='default', css="""
     .prompt-row {
         align-items: flex-start !important;
     }
-    .send-button {
-        margin-top: 40px;  /* Adjust this to match the height of the TextArea label */
+    .send-button-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
     }
 """) as demo:
     judge_id = gr.State(get_new_session_id())
     gr.Markdown("# Judge Arena")
-    gr.Markdown("*(Add your scoring details and other information here.)*")
+    gr.Markdown("*Free LLM Evals to test your GenAI application.*")
+    
     with gr.Tabs():
         with gr.TabItem("Judge Arena"):
-            # Model Responses at the top, side-by-side
+            # Add introduction section with side-by-side rules and scoring
+            gr.Markdown("""
+            # How the Arena Works:
+
+            ## Test two anonymous LLM judges side by side
+            Try out different eval metrics - from simple hallucination detection to qualitative interpretations
+            """)
+            
             with gr.Row():
                 with gr.Column():
-                    response_a = gr.TextArea(label="Response A", lines=10, interactive=False)
+                    gr.Markdown("""
+                    ## Battle Rules:
+                    - Both AIs stay anonymous - if either reveals its identity, the duel is void
+                    - Evaluate anything: coding, analysis, creative writing, math, or general knowledge
+                    """)
+                with gr.Column():
+                    gr.Markdown("""
+                    ## Scoring System:
+                    - Choose the LLM judge that most aligned with your choice as a human
+                    - If both score the same - choose the critique that you prefer more!
+                    - Your votes shape our real-time leaderboard
+                    - Every arena match adds to the growing stats
+                    """)
+            
+            # Add divider heading
+            gr.Markdown("""
+            # Start Voting Now
+            """)
+            
+            # Model Responses side-by-side
+            with gr.Row():
+                with gr.Column():
+                    gr.Markdown("### Model A")
+                    score_a = gr.Textbox(label="Score", interactive=False)
+                    critique_a = gr.TextArea(label="Critique", lines=8, interactive=False)
                     model_name_a = gr.Markdown("*Model: Unknown*")
                 with gr.Column():
-                    response_b = gr.TextArea(label="Response B", lines=10, interactive=False)
+                    gr.Markdown("### Model B")
+                    score_b = gr.Textbox(label="Score", interactive=False)
+                    critique_b = gr.TextArea(label="Critique", lines=8, interactive=False)
                     model_name_b = gr.Markdown("*Model: Unknown*")
             # Initially hide vote buttons and regenerate button
             with gr.Row(visible=False) as action_buttons_row:
                 vote_a = gr.Button("Choose A", variant="primary")
                 vote_tie = gr.Button("Tie", variant="secondary")
                 vote_b = gr.Button("Choose B", variant="primary")
-            regenerate_button = gr.Button("Regenerate", variant="secondary", visible=False)
+            regenerate_button = gr.Button("Regenerate with different models", variant="secondary", visible=False)
             # Eval Prompt and Variables below
             with gr.Row(elem_classes="prompt-row"):
                 eval_prompt = gr.TextArea(
                     label="Eval Prompt", 
                     lines=1, 
+                    value="""You are assessing a chat bot response to a user's input based on the helpfulness of the response.\n                    
+
+Score:
+
+A score of 1 means that the response's answer meets all of the evaluation criteria.
+
+A score of 0 means that the response's answer does not meet all of the evaluation criteria.
+
+Here is the data:\n
+
+[BEGIN DATA]
+
+***
+
+[User Query]: {{input}}
+
+***
+
+[Response]: {{response}}
+
+***
+
+[END DATA]""",
                     placeholder="Type your eval prompt here... denote variables like a ground truth response with {{variable}} to be populated below.",
                     show_label=True,
-                    scale=8  # Adjust this value to control width ratio
+                    scale=8
                 )
+            with gr.Row(elem_classes="send-button-row"):
                 send_btn = gr.Button(
                     value="Send",
                     variant="primary",
-                    scale=1,  # Adjust this value to control width ratio
-                    min_width=50,
-                    elem_classes="send-button"
+                    size="lg",
+                    scale=1  # Make button larger
                 )
-            gr.Markdown("### Eval Variables denoted by {{variable}}")
-            # Create inputs for up to 5 variables
+            gr.Markdown("### Variable Mapping")
+            # Create inputs for up to 5 variables, with first two visible by default
             variable_rows = []
             for i in range(5):
-                with gr.Row(visible=False) as var_row:
-                    with gr.Column(scale=0.2, min_width=80):  # Reduced scale and min_width
-                        var_label = gr.Markdown("Variable")
-                    with gr.Column(scale=1):  # Reduced scale
-                        var_input = gr.Textbox(label="", container=False)
+                # Set initial visibility True for first two rows (input and response)
+                initial_visibility = True if i < 2 else False
+                with gr.Row(visible=initial_visibility) as var_row:
+                    with gr.Column(scale=0.2, min_width=80):
+                        # Set initial labels for input and response
+                        initial_label = "**input:**" if i == 0 else "**response:**" if i == 1 else "Variable"
+                        var_label = gr.Markdown(initial_label)
+                    with gr.Column(scale=1):
+                        # Set initial values for input and response
+                        initial_value = "Hello! Can you tell me the weather today?" if i == 0 else \
+                                      "Hi there! It is 27 degrees Celsius today. Would you like the weather for the week ahead?" if i == 1 else ""
+                        var_input = gr.Textbox(label="", container=False, value=initial_value)
                     variable_rows.append((var_row, var_label, var_input))
         with gr.TabItem("Leaderboard"):
             refresh_button = gr.Button("Refresh")
             leaderboard_table = gr.Dataframe(
-                headers=['Model', 'ELO', 'Matches', 'Wins', 'Win Rate', 'Organization', 'License'],
-                datatype=['str', 'number', 'number', 'number', 'str', 'str', 'str']
+                headers=['Model', 'ELO', '95% CI', 'Matches', 'Organization', 'License'],
+                datatype=['str', 'number', 'str', 'number', 'str', 'str']
             )
+
+        with gr.TabItem("Policy"):
+            gr.Markdown("""
+                # About Atla
+                *Atla is an applied research organisation that trains models as evaluators to capture human preferences. Developers use Atla's models to run fast and accurate evaluations, so they can ship quickly and with confidence.*
+
+                # Our Policy
+                *(Add your policy information here)*
+
+                # Frequently Asked Questions
+                *(Add your FAQs here)*
+
+                # Contact Us
+                *(Add your contact information here)*
+            """)
 
     # Define state variables for model tracking
     model_a_state = gr.State()
@@ -428,47 +569,118 @@ with gr.Blocks(theme='default', css="""
     regenerate_button.click(
         fn=regenerate_prompt,
         inputs=[model_a_state, model_b_state, eval_prompt] + [var_input for _, _, var_input in variable_rows],
-        outputs=[response_a, response_b, action_buttons_row, model_name_a, model_name_b, model_a_state, model_b_state],
-        queue=True
+        outputs=[
+            score_a,
+            critique_a,
+            score_b,
+            critique_b,
+            action_buttons_row,
+            model_name_a,
+            model_name_b,
+            model_a_state,
+            model_b_state
+        ]
     )
 
     # Update model names after responses are generated
     def update_model_names(model_a, model_b):
         return gr.update(value=f"*Model: {model_a}*"), gr.update(value=f"*Model: {model_b}*")
 
+    # Store the last submitted prompt and variables for comparison
+    last_submission = gr.State({})
+
+    def handle_input_changes(prompt, *variables):
+        """Enable send button and disable regenerate button if inputs have changed"""
+        last_inputs = last_submission.value
+        current_inputs = {"prompt": prompt, "variables": variables}
+        inputs_changed = last_inputs != current_inputs
+        return [
+            gr.update(interactive=True),  # Always keep send button enabled
+            gr.update(visible=False)      # Hide regenerate button when inputs change
+        ]
+
+    # Update the vote button click handlers
     vote_a.click(
-        fn=vote,
-        inputs=[
-            gr.State('A'), model_a_state, model_b_state,
-            eval_prompt, response_a, response_b, judge_id
-        ],
-        outputs=[action_buttons_row, model_name_a, model_name_b]
+        fn=lambda *args: vote('A', *args),
+        inputs=[model_a_state, model_b_state, eval_prompt, score_a, score_b, judge_id],
+        outputs=[action_buttons_row, model_name_a, model_name_b, send_btn, regenerate_button]
     )
 
     vote_b.click(
-        fn=vote,
-        inputs=[
-            gr.State('B'), model_a_state, model_b_state,
-            eval_prompt, response_a, response_b, judge_id
-        ],
-        outputs=[action_buttons_row, model_name_a, model_name_b]
+        fn=lambda *args: vote('B', *args),
+        inputs=[model_a_state, model_b_state, eval_prompt, score_a, score_b, judge_id],
+        outputs=[action_buttons_row, model_name_a, model_name_b, send_btn, regenerate_button]
     )
 
     vote_tie.click(
-        fn=vote,
-        inputs=[
-            gr.State('Tie'), model_a_state, model_b_state,
-            eval_prompt, response_a, response_b, judge_id
-        ],
-        outputs=[action_buttons_row, model_name_a, model_name_b]
+        fn=lambda *args: vote('Tie', *args),
+        inputs=[model_a_state, model_b_state, eval_prompt, score_a, score_b, judge_id],
+        outputs=[action_buttons_row, model_name_a, model_name_b, send_btn, regenerate_button]
     )
 
+    # Update the send button handler to store the submitted inputs
+    def submit_and_store(prompt, *variables):
+        last_submission.value = {"prompt": prompt, "variables": variables}
+        response_a, response_b, buttons_visible, regen_visible, model_a, model_b = submit_prompt(prompt, *variables)
+        
+        # Parse the responses
+        score_a, critique_a = parse_model_response(response_a)
+        score_b, critique_b = parse_model_response(response_b)
+        
+        return (
+            score_a,
+            critique_a,
+            score_b,
+            critique_b,
+            buttons_visible,
+            gr.update(visible=False),  # Hide regenerate button on new submission
+            model_a,
+            model_b,
+            gr.update(value="*Model: Unknown*"),
+            gr.update(value="*Model: Unknown*")
+        )
+
     send_btn.click(
-        fn=submit_prompt,
+        fn=submit_and_store,
         inputs=[eval_prompt] + [var_input for _, _, var_input in variable_rows],
-        outputs=[response_a, response_b, action_buttons_row, regenerate_button, model_a_state, model_b_state],
-        queue=True
+        outputs=[
+            score_a,
+            critique_a,
+            score_b,
+            critique_b,
+            action_buttons_row,
+            regenerate_button,
+            model_a_state,
+            model_b_state,
+            model_name_a,    # Add model name outputs
+            model_name_b
+        ]
     )
+
+    # Update the input change handlers to also disable regenerate button
+    def handle_input_changes(prompt, *variables):
+        """Enable send button and disable regenerate button if inputs have changed"""
+        last_inputs = last_submission.value
+        current_inputs = {"prompt": prompt, "variables": variables}
+        inputs_changed = last_inputs != current_inputs
+        return [
+            gr.update(interactive=inputs_changed),           # send button
+            gr.update(interactive=not inputs_changed)        # regenerate button
+        ]
+
+    # Update the change handlers for prompt and variables
+    eval_prompt.change(
+        fn=handle_input_changes,
+        inputs=[eval_prompt] + [var_input for _, _, var_input in variable_rows],
+        outputs=[send_btn, regenerate_button]
+    )
+
+    for _, _, var_input in variable_rows:
+        var_input.change(
+            fn=handle_input_changes,
+            inputs=[eval_prompt] + [var_input for _, _, var_input in variable_rows],
+            outputs=[send_btn, regenerate_button]
+        )
 
     # Update the leaderboard
     def update_leaderboard():
