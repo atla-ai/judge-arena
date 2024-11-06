@@ -13,8 +13,6 @@ import pandas as pd
 from together import Together
 import os   
 
-load_dotenv() 
-
 anthropic_client = anthropic.Anthropic()  
 openai_client = OpenAI()
 together_client = Together()  
