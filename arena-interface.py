@@ -11,21 +11,50 @@ from openai import OpenAI
 import anthropic
 import pandas as pd
 from together import Together
-import os
+import os   
+from dotenv import load_dotenv
 
+load_dotenv() 
 
-
-
-# Initialize clients
-os.environ["TOGETHER_API_KEY"] = "89fc43189ac1782cd65e42bdf80343099c5bef78a121da2eff5e7e1a500aac72" 
-anthropic_client = anthropic.Anthropic(api_key="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")  # Replace with your actual Anthropic key
-openai_client = OpenAI(api_key="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")
-together_client = Together()  # No API key needed in constructor
+anthropic_client = anthropic.Anthropic()  
+openai_client = OpenAI()
+together_client = Together()  
 
 # Model and ELO score data
-elo_scores = defaultdict(lambda: 1500)
+DEFAULT_ELO = 1000  # Starting ELO for new models
+elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
 model_data = {
+    'Meta Llama 3.1 70B Instruct Turbo': {
+        'organization': 'Meta', 
+        'license': 'Open Source',
+        'api_model': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo'
+    },
+    'Meta Llama 3.1 405B Instruct Turbo': {
+        'organization': 'Meta',
+        'license': 'Open Source',
+        'api_model': 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo'
+    },
+    'Gemma 2 27B': {
+        'organization': 'Google',
+        'license': 'Open Source',
+        'api_model': 'google/gemma-2-27b-it'
+    },
+    'Gemma 2 9B': {
+        'organization': 'Google',
+        'license': 'Open Source',
+        'api_model': 'google/gemma-2-9b-it'
+    },
+    'Qwen 2 Instruct (72B)': {
+        'organization': 'Alibaba',
+        'license': 'Open Source',
+        'api_model': 'Qwen/Qwen2-72B-Instruct'
+    },
+    'Mistral (7B) Instruct v0.3': {
+        'organization': 'Mistral AI',
+        'license': 'Open Source',
+        'api_model': 'mistralai/Mistral-7B-Instruct-v0.3'
+    },
     'GPT-4o': {
         'organization': 'OpenAI',
         'license': 'Proprietary',
@@ -151,10 +180,9 @@ def get_model_response(model_name, prompt):
             return get_openai_response(api_model, prompt)
         elif organization == 'Anthropic':
             return get_anthropic_response(api_model, prompt)
-        elif organization == 'Meta':
-            return get_together_response(api_model, prompt)
         else:
-            return "Organization not supported."
+            # All other organizations use Together API
+            return get_together_response(api_model, prompt)
     except Exception as e:
         return f"Error with {organization} model {model_name}: {str(e)}"
 
@@ -282,7 +310,7 @@ def regenerate_prompt(model_a, model_b, eval_prompt, *variable_values):
 
 # Add these constants at the top of your file
 K_FACTOR = 32  # Standard chess K-factor, adjust as needed
-DEFAULT_ELO = 1200  # Starting ELO for new models
+DEFAULT_ELO = 1500  # Starting ELO for new models
 
 def calculate_elo_change(rating_a, rating_b, winner):
     """Calculate ELO rating changes for both players."""
@@ -425,17 +453,16 @@ with gr.Blocks(theme='default', css="""
             with gr.Row():
                 with gr.Column():
                     gr.Markdown("""
-                    ## Battle Rules:
+                    ## 🤺 Battle Rules:
                     - Both AIs stay anonymous - if either reveals its identity, the duel is void
                     - Evaluate anything: coding, analysis, creative writing, math, or general knowledge
                     """)
                 with gr.Column():
                     gr.Markdown("""
-                    ## Scoring System:
+                    ## 🧮 Scoring System:
                     - Choose the LLM judge that most aligned with your choice as a human
                     - If both score the same - choose the critique that you prefer more!
-                    - Your votes shape our real-time leaderboard
-                    - Every arena match adds to the growing stats
+                    - Your votes shape our real-time leaderboard 
                     """)
             
             # Add divider heading
@@ -517,6 +544,17 @@ Here is the data:\n
                                       "Hi there! It is 27 degrees Celsius today. Would you like the weather for the week ahead?" if i == 1 else ""
                         var_input = gr.Textbox(label="", container=False, value=initial_value)
                     variable_rows.append((var_row, var_label, var_input))
+            
+            # Add spacing and acknowledgements at the bottom
+            gr.Markdown("""
+            <br><br><br>
+            # Acknowledgements
+
+            We thank [LMSYS Org](https://lmsys.org/) for their hard work on the Chatbot Arena and fully credit them for the inspiration to build this.
+
+            We thank [Clementine Fourrier](https://huggingface.co/clefourrier) and Hugging Face for their guidance and partnership in setting this up.
+            """)
+
         with gr.TabItem("Leaderboard"):
             refresh_button = gr.Button("Refresh")
             leaderboard_table = gr.Dataframe(
@@ -526,17 +564,80 @@ Here is the data:\n
 
         with gr.TabItem("Policy"):
             gr.Markdown("""
-                # About Atla
-                *Atla is an applied research organisation that trains models as evaluators to capture human preferences. Developers use Atla's models to run fast and accurate evaluations, so they can ship quickly and with confidence.*
+# About Atla
 
-                # Our Policy
-                *(Add your policy information here)*
+Atla is an applied research organization that trains models as evaluators to capture human preferences. We're a team of researchers, engineers, and operational leaders, with experience spanning a variety of disciplines, all working together to build reliable and understandable AI systems. Our research is informed by our experiences conducting AI safety research at the UK AI Task Force, OpenAI and the Stanford Existential Risks Initiative.
 
-                # Frequently Asked Questions
-                *(Add your FAQs here)*
+# Our Mission
 
-                # Contact Us
-                *(Add your contact information here)*
+By creating advanced evaluation models, we enable AI developers to identify and fix risks, leading to safer, more reliable AI that can be trusted and widely used. Our aim is to surpass the current state-of-the-art evaluation methods by training models specifically for evaluation. AIs will probably become very powerful, and perform tasks that are difficult for us to verify. We want to enable humans to oversee AI systems that are solving tasks too difficult for humans to evaluate. We have written more about [our approach to scalable oversight](https://www.atla-ai.com/post/scaling-alignment) on our blog.
+
+# Judge Arena Policy
+
+## Overview
+
+Judge Arena is an open-source platform dedicated to improving the standard of evaluation of generative AI models in their role as judges. Users can run evals and assess anonymized responses from two competing model judges, choosing the better judgement or declaring a tie. This policy outlines our commitments and guidelines to ensure a fair, open, and collaborative environment for both users and model providers.
+
+## Transparency
+
+- **Open-Source**: Judge Arena's code is open-source and available on GitHub. This approach allows anyone to review, replicate, or modify the platform to suit their needs. We use proprietary model provider APIs where provided and Together AI's API to serve leading open-source models.
+- **Community Engagement**: We actively encourage contributions from the community. Feedback, code contributions, and discussions are welcome to improve the platform's functionality, fairness, and transparency.
+- **Methodology**: All processes related to model evaluation, rating calculations, and model selection are openly documented. This transparency ensures that our processes are understandable and reproducible by others.
+- **Data Sharing**: Periodically, we will share 20% of the collected evaluation data with the community. This data includes anonymized prompts, model responses, and aggregated evaluation results.
+
+## Model Inclusion Criteria
+
+Judge Arena is specifically designed to assess AI models that function as evaluators (a.k.a judges), including but not limited to powerful general-purpose models and the latest language models designed for evaluation tasks. Models are eligible for inclusion if they meet the following criteria:
+
+- **Judge Capability**: The model must possess the ability to score AND critique responses, content, or other models' outputs effectively.
+- **Adaptable:** The model must be prompt-able to be evaluate in different scoring formats, for different criteria.
+- **Accessibility**:
+   - **Public API Access**: Models accessible through public APIs without restrictive barriers.
+   - **Open-Source Models**: Models with publicly available weights that can be downloaded and run by the community.
+
+## Evaluation Methodology
+
+- **User Participation**: Users run evaluations and select preferred model responses based on quality, relevance, and accuracy contributing to the model's overall rating.
+- **Blind Testing**: All model evaluations are conducted blindly. Users are not informed which model produced which response to eliminate bias.
+- **Data Collection**: We collect sufficient data to ensure statistical significance in our evaluations. We additionally show the 95% confidence interval in the leaderboard to provide a signal of reliability.
+- **Anomaly Detection**: We monitor user activity to detect and mitigate anomalous behavior or voting patterns that could skew results.
+
+## Leaderboard Management
+
+- **ELO Ranking System**: Models are ranked on a public leaderboard based on aggregated user evaluations. We use an ELO rating system to rank AI judges on the public leaderboard. Each model begins with an initial rating of 1500 (as is used by the International Chess Federation), and we use a K-factor of 32 to determine the maximum rating adjustment after each evaluation.
+- **Minimum Period**: Listed models remain accessible on Judge Arena for a minimum period of two weeks to allow for comprehensive community evaluation.
+- **Deprecation Policy**: Models may be removed from the leaderboard if they become inaccessible, are no longer publicly available.
+
+## Privacy and Data Protection
+
+- **Anonymization**: All shared data is anonymized to prevent the identification of individual users.
+
+## Policy Updates and Communication
+
+- **Ongoing Revisions**: This policy may be updated to reflect changes in our practices or in response to community feedback.
+- **Notification of Changes**: Policy changes will be communicated to users and stakeholders on this page.
+
+# FAQ
+
+**Isn't this the same as Chatbot Arena?**
+
+- We are big fans of what the LMSYS team have done with Chatbot Arena and fully credit them for the inspiration to develop this. We were looking for a dynamic leaderboard that graded on AI judge capabilities and didn't manage to find one, so we created Judge Arena. This UI is designed especially for evals; to match the format of the model-based eval prompts that you would use in your LLM evaluation / monitoring tool.
+
+\n\n**Why should I trust this leaderboard?**
+
+- We have listed out our efforts to be fully transparent in the policies above. All of the code for this leaderboard is open-source and can be found on our [Github](https://github.com/atla-ai/judge-arena).
+
+\n\n**Who funds this effort?**
+
+- Atla currently funds this out of our own pocket. We are looking for API credits (with no strings attached) to support this effort - please get in touch if you or someone you know might be able to help.
+
+\n\n**What is Atla working on?**
+
+- We are training a general-purpose evaluator that you will soon be able to run in this Judge Arena. Our next step will be to open-source a powerful model that the community can use to run fast and accurate evaluations.
+
+## Get in touch
+
+Feel free to email us at [support@atla-ai.com](mailto:support@atla-ai.com) or leave feedback on our [Github](https://github.com/atla-ai/judge-arena)!
             """)
 
     # Define state variables for model tracking

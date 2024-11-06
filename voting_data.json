@@ -1,11 +1,11 @@
 [
   {
-    "timestamp": "2024-11-05T22:03:03.827317",
+    "timestamp": "2024-11-06T17:51:17.402344",
     "prompt": "You are assessing a chat bot response to a user's input based on the helpfulness of the response.\n                    \nScore:\nA score of 1 means that the response's answer meets all of the evaluation criteria.\nA score of 0 means that the response's answer does not meet all of the evaluation criteria.\nHere is the data:\n\n[BEGIN DATA]\n***\n[User Query]: {{input}}\n***\n[Response]: {{response}}\n***\n[END DATA]",
-    "response_a": "0",
-    "response_b": "0.5",
-    "model_a": "GPT-3.5 Turbo",
-    "model_b": "Meta Llama 3.1 8B Instruct Turbo",
+    "response_a": "1",
+    "response_b": "Error",
+    "model_a": "Claude 3 Haiku",
+    "model_b": "Qwen 2 Instruct (72B)",
     "winner": "Tie",
     "judge_id": "user1"
   }
