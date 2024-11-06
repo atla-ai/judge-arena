@@ -3,3 +3,4 @@ openai>=1.12.0
 anthropic>=0.18.1
 pandas>=2.2.1
 together>=0.2.8
+dotenv
