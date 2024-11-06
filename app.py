@@ -12,7 +12,6 @@ import anthropic
 import pandas as pd
 from together import Together
 import os   
-from dotenv import load_dotenv
 
 load_dotenv() 
 
