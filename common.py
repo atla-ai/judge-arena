@@ -35,6 +35,7 @@ Score:
 A score of 1 means that the response's answer meets all of the evaluation criteria.
 A score of 0 means that the response's answer does not meet all of the evaluation criteria.
 
+Here is the data:
 [BEGIN DATA]
 ***
 [User Query]: {{input}}
@@ -71,11 +72,11 @@ POLICY_CONTENT = """
 # About Atla
 
 Atla is an applied research organization that trains models as evaluators to capture human preferences. We're a team of researchers, engineers, and operational leaders, with experience spanning a variety of disciplines, all working together to build reliable and understandable AI systems. Our research is informed by our experiences conducting AI safety research at the UK AI Task Force, OpenAI and the Stanford Existential Risks Initiative.
-
+<br><br>
 # Our Mission
 
 By creating advanced evaluation models, we enable AI developers to identify and fix risks, leading to safer, more reliable AI that can be trusted and widely used. Our aim is to surpass the current state-of-the-art evaluation methods by training models specifically for evaluation. AIs will probably become very powerful, and perform tasks that are difficult for us to verify. We want to enable humans to oversee AI systems that are solving tasks too difficult for humans to evaluate. We have written more about [our approach to scalable oversight](https://www.atla-ai.com/post/scaling-alignment) on our blog.
-
+<br><br>
 # Judge Arena Policy
 
 ## Overview
@@ -120,7 +121,7 @@ Judge Arena is specifically designed to assess AI models that function as evalua
 
 - **Ongoing Revisions**: This policy may be updated to reflect changes in our practices or in response to community feedback.
 - **Notification of Changes**: Policy changes will be communicated to users and stakeholders on this page.
-
+<br><br>
 # FAQ
 
 **Isn't this the same as Chatbot Arena?**
@@ -138,6 +139,6 @@ Judge Arena is specifically designed to assess AI models that function as evalua
 \n\n**What is Atla working on?**
 
 - We are training a general-purpose evaluator that you will soon be able to run in this Judge Arena. Our next step will be to open-source a powerful model that the community can use to run fast and accurate evaluations.
-
+<br><br>
 ## Get in touch
 Feel free to email us at [support@atla-ai.com](mailto:support@atla-ai.com) or leave feedback on our [Github](https://github.com/atla-ai/judge-arena)!"""
