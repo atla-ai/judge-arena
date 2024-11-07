@@ -287,29 +287,6 @@ leaderboard_table = gr.Dataframe(
     datatype=['str', 'number', 'str', 'number', 'str', 'str', 'str']
 )
 
-def parse_model_response(response):
-    try:
-        # Debug print
-        print(f"Raw model response: {response}")
-        
-        # First try to parse the entire response as JSON
-        try:
-            data = json.loads(response)
-            return str(data.get('result', 'N/A')), data.get('feedback', 'N/A')
-        except json.JSONDecodeError:
-            # If that fails (typically for smaller models), try to find JSON within the response
-            json_match = re.search(r'{.*}', response)
-            if json_match:
-                data = json.loads(json_match.group(0))
-                return str(data.get('result', 'N/A')), data.get('feedback', 'N/A')
-            else:
-                return 'Error', f"Failed to parse response: {response}"
-                
-    except Exception as e:
-        # Debug print for error case
-        print(f"Failed to parse response: {str(e)}")
-        return 'Error', f"Failed to parse response: {response}"
-
 def get_leaderboard_stats():
     """Get summary statistics for the leaderboard."""
     try:
