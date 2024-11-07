@@ -122,6 +122,7 @@ Judge Arena is specifically designed to assess AI models that function as evalua
 - **Ongoing Revisions**: This policy may be updated to reflect changes in our practices or in response to community feedback.
 - **Notification of Changes**: Policy changes will be communicated to users and stakeholders on this page.
 <br><br>
+
 # FAQ
 
 **Isn't this the same as Chatbot Arena?**
@@ -140,5 +141,5 @@ Judge Arena is specifically designed to assess AI models that function as evalua
 
 - We are training a general-purpose evaluator that you will soon be able to run in this Judge Arena. Our next step will be to open-source a powerful model that the community can use to run fast and accurate evaluations.
 <br><br>
-## Get in touch
+# Get in touch
 Feel free to email us at [support@atla-ai.com](mailto:support@atla-ai.com) or leave feedback on our [Github](https://github.com/atla-ai/judge-arena)!"""
