@@ -6,11 +6,8 @@ import random
 from collections import defaultdict
 import pandas as pd
 import os   
-from dotenv import load_dotenv
 from gen_api_answer import get_model_response
 from common import *
-
-load_dotenv() 
 
 # Model and ELO score data
 DEFAULT_ELO = 1500  # Starting ELO for new models
