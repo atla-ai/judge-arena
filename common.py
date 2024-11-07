@@ -29,28 +29,19 @@ CSS_STYLES = """
 """
 
 # Default Eval Prompt
-DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on the helpfulness of the response.\n                    
+DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on the helpfulness of the response.
 
 Score:
-
 A score of 1 means that the response's answer meets all of the evaluation criteria.
-
 A score of 0 means that the response's answer does not meet all of the evaluation criteria.
 
-Here is the data:\n
-
+Here is the data:
 [BEGIN DATA]
-
 ***
-
 [User Query]: {{input}}
-
 ***
-
 [Response]: {{response}}
-
 ***
-
 [END DATA]"""
 
 # Default Variable Values
