@@ -1,0 +1,13 @@
+{"name": "Meta Llama 3.1 70B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"}
+{"name": "Meta Llama 3.1 405B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"}
+{"name": "Gemma 2 27B", "organization": "Google", "license": "Open Source", "api_model": "google/gemma-2-27b-it"}
+{"name": "Gemma 2 9B", "organization": "Google", "license": "Open Source", "api_model": "google/gemma-2-9b-it"}
+{"name": "Qwen 2 Instruct (72B)", "organization": "Alibaba", "license": "Open Source", "api_model": "Qwen/Qwen2-72B-Instruct"}
+{"name": "Mistral (7B) Instruct v0.3", "organization": "Mistral AI", "license": "Open Source", "api_model": "mistralai/Mistral-7B-Instruct-v0.3"}
+{"name": "GPT-4o", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-4o"}
+{"name": "GPT-4 Turbo", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-4-turbo"}
+{"name": "GPT-3.5 Turbo", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-3.5-turbo"}
+{"name": "Claude 3 Haiku", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-haiku-20240307"}
+{"name": "Claude 3 Sonnet", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-sonnet-20240229"}
+{"name": "Claude 3 Opus", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-opus-20240229"}
+{"name": "Meta Llama 3.1 8B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"}
