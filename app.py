@@ -342,13 +342,13 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
                         label="Eval Prompt",
                         lines=1, 
                         value=DEFAULT_EVAL_PROMPT,
-                        placeholder="Type your eval prompt here... denote variables in {{curly brackets}} to be populated on the right.",
+                        placeholder="Type your eval prompt here... denote input variables in {{curly brackets}}.",
                         show_label=True
                     )
 
                 # Right column - Variable Mapping
                 with gr.Column(scale=1):
-                    gr.Markdown("### Variable Mapping")
+                    gr.Markdown("### {{Input Variables}}")
                     # Create inputs for up to 5 variables, with first two visible by default
                     variable_rows = []
                     for i in range(5):
