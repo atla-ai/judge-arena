@@ -16,13 +16,6 @@ elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
 
 
-# Model and ELO score data
-DEFAULT_ELO = 1500  # Starting ELO for new models
-K_FACTOR = 32  # Standard chess K-factor, adjust as needed
-elo_scores = defaultdict(lambda: DEFAULT_ELO)
-vote_counts = defaultdict(int)
-
-
 # Load the model_data from JSONL
 def load_model_data():
     model_data = {}
@@ -495,12 +488,18 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
 
     # Update the send button handler to store the submitted inputs
     def submit_and_store(prompt, *variables):
-        last_submission.value = {"prompt": prompt, "variables": variables}
+        # Create a copy of the current submission
+        current_submission = {"prompt": prompt, "variables": variables}
+        
+        # Get the responses
         response_a, response_b, buttons_visible, regen_visible, model_a, model_b = submit_prompt(prompt, *variables)
         
         # Parse the responses
         score_a, critique_a = parse_model_response(response_a)
         score_b, critique_b = parse_model_response(response_b)
+        
+        # Update the last_submission state with the current values
+        last_submission.value = current_submission
         
         return (
             score_a,
@@ -508,7 +507,7 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
             score_b,
             critique_b,
             buttons_visible,
-            gr.update(visible=True),  # Show regenerate button
+            gr.update(visible=True, interactive=True),  # Show and enable regenerate button
             model_a,
             model_b,
             gr.update(value="*Model: Unknown*"),
