@@ -35,7 +35,6 @@ Score:
 A score of 1 means that the response's answer meets all of the evaluation criteria.
 A score of 0 means that the response's answer does not meet all of the evaluation criteria.
 
-Here is the data:
 [BEGIN DATA]
 ***
 [User Query]: {{input}}
