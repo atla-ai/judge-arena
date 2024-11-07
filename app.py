@@ -6,7 +6,7 @@ import random
 from collections import defaultdict
 import pandas as pd
 import os   
-from gen_api_answer import get_model_response
+from gen_api_answer import get_model_response, parse_model_response
 from common import *
 
 # Model and ELO score data
