@@ -16,6 +16,13 @@ elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
 
 
+# Model and ELO score data
+DEFAULT_ELO = 1500  # Starting ELO for new models
+K_FACTOR = 32  # Standard chess K-factor, adjust as needed
+elo_scores = defaultdict(lambda: DEFAULT_ELO)
+vote_counts = defaultdict(int)
+
+
 # Load the model_data from JSONL
 def load_model_data():
     model_data = {}
@@ -342,13 +349,13 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
                         label="Eval Prompt",
                         lines=1, 
                         value=DEFAULT_EVAL_PROMPT,
-                        placeholder="Type your eval prompt here... denote input variables in {{curly brackets}}.",
+                        placeholder="Type your eval prompt here... denote variables in {{curly brackets}} to be populated on the right.",
                         show_label=True
                     )
 
                 # Right column - Variable Mapping
                 with gr.Column(scale=1):
-                    gr.Markdown("### {{Input Variables}}")
+                    gr.Markdown("### {{Input variables}} to be evaluated")
                     # Create inputs for up to 5 variables, with first two visible by default
                     variable_rows = []
                     for i in range(5):
@@ -421,16 +428,22 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
         for i in range(5):
             var_row, var_input = variable_rows[i]
             if i < len(variables):
+                # Set default values for 'input' and 'response', otherwise leave empty
+                if variables[i] == "input":
+                    initial_value = DEFAULT_INPUT
+                elif variables[i] == "response":
+                    initial_value = DEFAULT_RESPONSE
+                else:
+                    initial_value = ""  # Empty for new variables
+
                 updates.extend([
                     gr.update(visible=True),  # var_row
-                    gr.update(value=f"**{variables[i]}:**"),  # var_input
-                    gr.update(visible=True)  # var_input
+                    gr.update(value=initial_value, label=variables[i], visible=True)  # var_input with dynamic label
                 ])
             else:
                 updates.extend([
                     gr.update(visible=False),  # var_row
-                    gr.update(),  # var_input
-                    gr.update(visible=False, value="")  # var_input
+                    gr.update(value="", visible=False)  # var_input
                 ])
         return updates
 
