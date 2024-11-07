@@ -1,12 +1,42 @@
 [
   {
-    "timestamp": "2024-11-06T17:51:17.402344",
+    "timestamp": "2024-11-07T10:27:13.300425",
     "prompt": "You are assessing a chat bot response to a user's input based on the helpfulness of the response.\n                    \nScore:\nA score of 1 means that the response's answer meets all of the evaluation criteria.\nA score of 0 means that the response's answer does not meet all of the evaluation criteria.\nHere is the data:\n\n[BEGIN DATA]\n***\n[User Query]: {{input}}\n***\n[Response]: {{response}}\n***\n[END DATA]",
     "response_a": "1",
-    "response_b": "Error",
-    "model_a": "Claude 3 Haiku",
-    "model_b": "Qwen 2 Instruct (72B)",
+    "response_b": "1",
+    "model_a": "Meta Llama 3.1 405B Instruct Turbo",
+    "model_b": "Mistral (7B) Instruct v0.3",
+    "winner": "A",
+    "judge_id": "user1"
+  },
+  {
+    "timestamp": "2024-11-07T10:27:17.521652",
+    "prompt": "You are assessing a chat bot response to a user's input based on the helpfulness of the response.\n                    \nScore:\nA score of 1 means that the response's answer meets all of the evaluation criteria.\nA score of 0 means that the response's answer does not meet all of the evaluation criteria.\nHere is the data:\n\n[BEGIN DATA]\n***\n[User Query]: {{input}}\n***\n[Response]: {{response}}\n***\n[END DATA]",
+    "response_a": "1",
+    "response_b": "0",
+    "model_a": "Qwen 2 Instruct (72B)",
+    "model_b": "Meta Llama 3.1 70B Instruct Turbo",
+    "winner": "B",
+    "judge_id": "user1"
+  },
+  {
+    "timestamp": "2024-11-07T10:27:23.071498",
+    "prompt": "You are assessing a chat bot response to a user's input based on the helpfulness of the response.\n                    \nScore:\nA score of 1 means that the response's answer meets all of the evaluation criteria.\nA score of 0 means that the response's answer does not meet all of the evaluation criteria.\nHere is the data:\n\n[BEGIN DATA]\n***\n[User Query]: {{input}}\n***\n[Response]: {{response}}\n***\n[END DATA]",
+    "response_a": "1",
+    "response_b": "1",
+    "model_a": "Meta Llama 3.1 405B Instruct Turbo",
+    "model_b": "Claude 3 Sonnet",
     "winner": "Tie",
+    "judge_id": "user1"
+  },
+  {
+    "timestamp": "2024-11-07T10:27:46.562638",
+    "prompt": "You are assessing a chat bot response to a user's input based on the helpfulness of the response.\n                    \nScore:\nA score of 1 means that the response's answer meets all of the evaluation criteria.\nA score of 0 means that the response's answer does not meet all of the evaluation criteria.\nHere is the data:\n\n[BEGIN DATA]\n***\n[User Query]: {{input}}\n***\n[Response]: {{response}}\n***\n[END DATA]",
+    "response_a": "1",
+    "response_b": "1",
+    "model_a": "GPT-4 Turbo",
+    "model_b": "Gemma 2 27B",
+    "winner": "A",
     "judge_id": "user1"
   }
 ]

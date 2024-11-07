@@ -21,7 +21,7 @@ openai_client = OpenAI()
 together_client = Together()  
 
 # Model and ELO score data
-DEFAULT_ELO = 1000  # Starting ELO for new models
+DEFAULT_ELO = 1500  # Starting ELO for new models
 elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
 model_data = {
@@ -137,7 +137,7 @@ def get_final_prompt(eval_prompt, variable_values):
     return eval_prompt
 
 # Add this near the top with other constants
-SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction. Your output format should be a JSON as follows: {{"feedback": "(write a feedback for the evaluation criteria)", "result": "(a score based on the evaluation criteria)"}}"""
+SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction. Your output format should strictly adhere to JSON as follows: {"feedback": "<write feedback>", "result": <numerical score>}. Ensure the output is valid JSON, without additional formatting or explanations."""
 
 def get_openai_response(model_name, prompt):
     try:
@@ -419,12 +419,26 @@ def get_together_response(model_name, prompt):
 
 def parse_model_response(response):
     try:
-        # Parse JSON response
-        data = json.loads(response)
-        return data.get('result', 'N/A'), data.get('feedback', 'N/A')
-    except:
-        # If JSON parsing fails, return original response
-        return 'Error', response
+        # Debug print
+        print(f"Raw model response: {response}")
+        
+        # First try to parse the entire response as JSON
+        try:
+            data = json.loads(response)
+            return str(data.get('result', 'N/A')), data.get('feedback', 'N/A')
+        except json.JSONDecodeError:
+            # If that fails (typically for smaller models), try to find JSON within the response
+            json_match = re.search(r'{.*}', response)
+            if json_match:
+                data = json.loads(json_match.group(0))
+                return str(data.get('result', 'N/A')), data.get('feedback', 'N/A')
+            else:
+                return 'Error', f"Failed to parse response: {response}"
+                
+    except Exception as e:
+        # Debug print for error case
+        print(f"Failed to parse response: {str(e)}")
+        return 'Error', f"Failed to parse response: {response}"
 
 with gr.Blocks(theme='default', css="""
     .prompt-row {
@@ -690,15 +704,6 @@ Feel free to email us at [support@atla-ai.com](mailto:support@atla-ai.com) or le
     # Store the last submitted prompt and variables for comparison
     last_submission = gr.State({})
 
-    def handle_input_changes(prompt, *variables):
-        """Enable send button and disable regenerate button if inputs have changed"""
-        last_inputs = last_submission.value
-        current_inputs = {"prompt": prompt, "variables": variables}
-        inputs_changed = last_inputs != current_inputs
-        return [
-            gr.update(interactive=True),  # Always keep send button enabled
-            gr.update(visible=False)      # Hide regenerate button when inputs change
-        ]
 
     # Update the vote button click handlers
     vote_a.click(
@@ -734,7 +739,7 @@ Feel free to email us at [support@atla-ai.com](mailto:support@atla-ai.com) or le
             score_b,
             critique_b,
             buttons_visible,
-            gr.update(visible=False),  # Hide regenerate button on new submission
+            gr.update(visible=True),  # Changed from False to True to show regenerate button
             model_a,
             model_b,
             gr.update(value="*Model: Unknown*"),
@@ -760,13 +765,13 @@ Feel free to email us at [support@atla-ai.com](mailto:support@atla-ai.com) or le
 
     # Update the input change handlers to also disable regenerate button
     def handle_input_changes(prompt, *variables):
-        """Enable send button and disable regenerate button if inputs have changed"""
+        """Enable send button and manage regenerate button based on input changes"""
         last_inputs = last_submission.value
         current_inputs = {"prompt": prompt, "variables": variables}
         inputs_changed = last_inputs != current_inputs
         return [
-            gr.update(interactive=inputs_changed),           # send button
-            gr.update(interactive=not inputs_changed)        # regenerate button
+            gr.update(interactive=True),                    # send button always enabled
+            gr.update(interactive=not inputs_changed)       # regenerate button disabled if inputs changed
         ]
 
     # Update the change handlers for prompt and variables
