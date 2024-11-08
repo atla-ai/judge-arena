@@ -1,10 +1,8 @@
 # Page Headers
-MAIN_TITLE = "# Judge Arena - Test anonymous LLM judges side-by-side"
-SUBTITLE = "*Free LLM Evals to test your GenAI application.*"
+MAIN_TITLE = "# Judge Arena - Free LLM Evals to test your GenAI application"
 
 # How it works section
 HOW_IT_WORKS = """
-# How it works:
 - **Run any form of evaluation:** from simple hallucination detection to qualitative interpretations
 - **Evaluate anything:** coding, analysis, creative writing, math, or general knowledge
 """
@@ -13,7 +11,8 @@ BATTLE_RULES = """
 ## 🤺 Battle Rules:
 - Both AIs stay anonymous - if either reveals its identity, the duel is void
 - Choose the LLM judge that most aligns with your judgement
-- If both score the same - choose the critique that you prefer more!\n
+- If both score the same - choose the critique that you prefer more!
+<br><br>
 """
 
 # CSS Styles
@@ -29,6 +28,18 @@ CSS_STYLES = """
 """
 
 # Default Eval Prompt
+EVAL_DESCRIPTION = """
+## 📝 Instructions
+**Precise evaluation criteria leads to more consistent and reliable judgments.** A good evaluation prompt should include the following:
+- Evaluation criteria
+- Scoring rubric 
+- (Optional) Examples\n
+
+**Any variables you define in your prompt using {{double curly braces}} will automatically map to the corresponding input fields under "Sample to evaluate" section on the right.**
+
+<br><br>
+"""
+
 DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on the helpfulness of the response.
 
 Score:
