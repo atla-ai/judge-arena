@@ -3,7 +3,7 @@ import json
 import re
 import random
 from collections import defaultdict
-import os   
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -11,7 +11,7 @@ load_dotenv()
 import gradio as gr
 import pandas as pd
 from gen_api_answer import get_model_response
-from db import add_vote, create_db_connection
+from db import add_vote, create_db_connection, get_votes
 from utils import Vote
 from common import *
 
@@ -22,6 +22,10 @@ elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
 
 db = create_db_connection()
+votes_collection = db.get_collection("votes")
+
+current_time = datetime.now()
+voting_data = get_votes(db)
 
 # Load the model_data from JSONL
 def load_model_data():
@@ -43,7 +47,6 @@ def load_model_data():
 model_data = load_model_data()
 
 current_session_id = 0
-voting_data = []
 
 def get_new_session_id():
     global current_session_id
@@ -147,11 +150,38 @@ def vote(choice, model_a, model_b, prompt, response_a, response_b, judge_id):
 
 
 def get_leaderboard():
+    """Generate leaderboard data using votes from MongoDB."""
+    # Initialize scores and counts
+    ratings = defaultdict(lambda: DEFAULT_ELO)
+    matches = defaultdict(int)
+
+    # Process each vote to calculate ELO scores
+    for vote in voting_data:
+        model_a = vote["model_a"]
+        model_b = vote["model_b"]
+        winner = vote["winner"]
+
+        # Skip if models aren't in current model_data
+        if model_a not in model_data or model_b not in model_data:
+            continue
+
+        # Update match counts
+        matches[model_a] += 1
+        matches[model_b] += 1
+
+        # Calculate and update ELO changes
+        change_a, change_b = calculate_elo_change(
+            ratings[model_a], ratings[model_b], winner
+        )
+        ratings[model_a] += change_a
+        ratings[model_b] += change_b
+
     # Generate leaderboard data
     leaderboard = []
-    for model, elo in elo_scores.items():
-        votes = vote_counts[model]
-        ci = 1.96 * (400 / (votes + 1) ** 0.5)  # Approximate 95% confidence interval
+    for model in model_data.keys():
+        votes = matches[model]
+        elo = ratings[model]
+        ci = 1.96 * (400 / (votes + 1) ** 0.5) if votes > 0 else 0  # Confidence interval
         data = {
             'Model': model,
             'ELO Score': f"{elo:.2f}",
@@ -161,6 +191,7 @@ def get_leaderboard():
             'License': model_data[model]['license'],
         }
         leaderboard.append(data)
+
     # Sort by ELO score
     leaderboard.sort(key=lambda x: float(x['ELO Score']), reverse=True)
     return leaderboard
@@ -221,17 +252,9 @@ def calculate_elo_change(rating_a, rating_b, winner):
     return change_a, change_b
 
 def update_leaderboard():
-    """Calculate current ELO ratings from voting history in MongoDB."""
     ratings = defaultdict(lambda: DEFAULT_ELO)
     matches = defaultdict(int)
     wins = defaultdict(int)
-
-    # Fetch voting data from MongoDB
-    votes_collection = db.get_collection("votes")
-    current_time = datetime.now()
-    voting_data = list(
-        votes_collection.find({"timestamp": {"$lte": current_time.isoformat()}})
-    )
 
     # Process each vote
     for vote in voting_data:
@@ -323,10 +346,11 @@ def parse_model_response(response):
 
 def get_leaderboard_stats():
     """Get summary statistics for the leaderboard."""
+    now = datetime.now(timezone.utc)
     votes_collection = db.get_collection("votes")
     total_votes = votes_collection.count_documents({})
     total_models = len(model_data)
-    last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+    last_updated = now.replace(minute=0, second=0, microsecond=0).strftime("%B %d, %Y at %H:00 UTC")
 
     return f"""
 ### Leaderboard Stats
@@ -429,7 +453,6 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
             gr.Markdown(ACKNOWLEDGEMENTS)
 
         with gr.TabItem("Leaderboard"):
-            refresh_button = gr.Button("Refresh")
             stats_display = gr.Markdown()
             leaderboard_table = gr.Dataframe(
                 headers=['Model', 'ELO', '95% CI', 'Matches', 'Organization', 'License'],
@@ -588,12 +611,6 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
         ]
         stats = get_leaderboard_stats()
         return [gr.update(value=data), gr.update(value=stats)]
-
-    refresh_button.click(
-        fn=refresh_leaderboard,
-        inputs=None,
-        outputs=[leaderboard_table, stats_display]
-    )
 
     # Add the load event at the very end, just before demo.launch()
     demo.load(

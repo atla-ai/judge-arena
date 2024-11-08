@@ -2,6 +2,8 @@ import os
 from pymongo import MongoClient
 from pymongo.database import Database
 from utils import get_logger, Vote
+from datetime import datetime, timedelta, timezone
+from typing import List
 
 logger = get_logger()
 
@@ -20,3 +22,12 @@ def add_vote(vote: Vote, db: Database) -> None:
     except Exception as e:
         logger.error("Error adding vote to database")
         logger.error(e)
+
+
+def get_votes(db: Database) -> List[Vote]:
+    now = datetime.now(timezone.utc)
+    current_hour = now.replace(minute=0, second=0, microsecond=0)
+    votes = list(
+        db.get_collection("votes").find({"timestamp": {"$lte": current_hour.isoformat()}})
+    )
+    return votes
