@@ -25,12 +25,21 @@ CSS_STYLES = """
         justify-content: flex-end;
         margin-top: 8px;
     }
+    /* Style for metric buttons */
+    .metric-button-active {
+        background-color: #2B3A55 !important;
+        color: white !important;
+    }
+    /* Add this to ensure proper button spacing */
+    .metric-buttons-row {
+        gap: 8px;
+    }
 """
 
 # Default Eval Prompt
 EVAL_DESCRIPTION = """
 ## 📝 Instructions
-**Precise evaluation criteria leads to more consistent and reliable judgments.** A good evaluation prompt should include the following:
+**Precise evaluation criteria leads to more consistent and reliable judgments.** A good evaluation prompt should include the following elements:
 - Evaluation criteria
 - Scoring rubric 
 - (Optional) Examples\n
