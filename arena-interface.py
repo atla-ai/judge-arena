@@ -7,8 +7,9 @@ from collections import defaultdict
 import pandas as pd
 import os   
 from dotenv import load_dotenv
-from gen_api_answer import get_model_response
+from gen_api_answer import get_model_response, parse_model_response
 from common import *
+from example_metrics import EXAMPLE_METRICS
 
 load_dotenv() 
 
@@ -96,7 +97,8 @@ def submit_prompt(eval_prompt, *variable_values):
             gr.update(visible=True),
             gr.update(visible=True),
             model_a,
-            model_b
+            model_b,
+            final_prompt
         )
     except Exception as e:
         print(f"Error in submit_prompt: {str(e)}")
@@ -106,10 +108,11 @@ def submit_prompt(eval_prompt, *variable_values):
             gr.update(visible=False),
             gr.update(visible=False),
             None,
+            None,
             None
         )
 
-def vote(choice, model_a, model_b, prompt, response_a, response_b, judge_id):
+def vote(choice, model_a, model_b, final_prompt, score_a, critique_a, score_b, critique_b, judge_id):
     # Update ELO scores based on user choice
     elo_a = elo_scores[model_a]
     elo_b = elo_scores[model_b]
@@ -132,8 +135,17 @@ def vote(choice, model_a, model_b, prompt, response_a, response_b, judge_id):
     vote_counts[model_a] += 1
     vote_counts[model_b] += 1
 
-    # Store the vote data
-    store_vote_data(prompt, response_a, response_b, model_a, model_b, choice, judge_id)
+    # Format the full responses with score and critique
+    response_a = f"""{score_a}
+
+{critique_a}"""
+
+    response_b = f"""{score_b}
+
+{critique_b}"""
+
+    # Store the vote data with the final prompt
+    store_vote_data(final_prompt, response_a, response_b, model_a, model_b, choice, judge_id)
 
     # Return updates for UI components
     return {
@@ -290,29 +302,6 @@ leaderboard_table = gr.Dataframe(
     datatype=['str', 'number', 'str', 'number', 'str', 'str', 'str']
 )
 
-def parse_model_response(response):
-    try:
-        # Debug print
-        print(f"Raw model response: {response}")
-        
-        # First try to parse the entire response as JSON
-        try:
-            data = json.loads(response)
-            return str(data.get('result', 'N/A')), data.get('feedback', 'N/A')
-        except json.JSONDecodeError:
-            # If that fails (typically for smaller models), try to find JSON within the response
-            json_match = re.search(r'{.*}', response)
-            if json_match:
-                data = json.loads(json_match.group(0))
-                return str(data.get('result', 'N/A')), data.get('feedback', 'N/A')
-            else:
-                return 'Error', f"Failed to parse response: {response}"
-                
-    except Exception as e:
-        # Debug print for error case
-        print(f"Failed to parse response: {str(e)}")
-        return 'Error', f"Failed to parse response: {response}"
-
 def get_leaderboard_stats():
     """Get summary statistics for the leaderboard."""
     try:
@@ -344,29 +333,69 @@ if __name__ == "__main__":
     
     # ... rest of your Gradio app setup ...
 
+
+def set_example_metric(metric_name):
+    if metric_name == "Custom":
+        variables = parse_variables(DEFAULT_EVAL_PROMPT)
+        variable_values = []
+        for var in variables:
+            if var == "input":
+                variable_values.append(DEFAULT_INPUT)
+            elif var == "response":
+                variable_values.append(DEFAULT_RESPONSE)
+            else:
+                variable_values.append("")  # Default empty value
+        # Pad variable_values to match the length of variable_rows
+        while len(variable_values) < len(variable_rows):
+            variable_values.append("")
+        return [DEFAULT_EVAL_PROMPT] + variable_values
+
+    metric_data = EXAMPLE_METRICS[metric_name]
+    variables = parse_variables(metric_data["prompt"])
+    variable_values = []
+    for var in variables:
+        value = metric_data.get(var, "")  # Default to empty string if not found
+        variable_values.append(value)
+    # Pad variable_values to match the length of variable_rows
+    while len(variable_values) < len(variable_rows):
+        variable_values.append("")
+    return [metric_data["prompt"]] + variable_values
+
+# Select random metric at startup
+def get_random_metric():
+    metrics = list(EXAMPLE_METRICS.keys())
+    return set_example_metric(random.choice(metrics))
+
 with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
     judge_id = gr.State(get_new_session_id())
     gr.Markdown(MAIN_TITLE)
-    gr.Markdown(SUBTITLE)
+    gr.Markdown(HOW_IT_WORKS)
     
     with gr.Tabs():
         with gr.TabItem("Judge Arena"):
-            gr.Markdown(HOW_IT_WORKS)
             
             with gr.Row():
                 with gr.Column():
                     gr.Markdown(BATTLE_RULES)
+                    gr.Markdown(EVAL_DESCRIPTION)
             
-            # Add heading for Eval Prompt
-            gr.Markdown("\n")
-            
+            # Add Example Metrics Section
+            with gr.Accordion("Evaluator Prompt Templates", open=False):
+                with gr.Row():
+                    custom_btn = gr.Button("Custom", variant="secondary")
+                    hallucination_btn = gr.Button("Hallucination")
+                    precision_btn = gr.Button("Precision")
+                    recall_btn = gr.Button("Recall")
+                    coherence_btn = gr.Button("Logical coherence")
+                    faithfulness_btn = gr.Button("Faithfulness")
+
             # Eval Prompt and Variables side by side
             with gr.Row():
                 # Left column - Eval Prompt
                 with gr.Column(scale=1):
                     eval_prompt = gr.TextArea(
-                        label="Eval Prompt",
-                        lines=1, 
+                        label="Evaluator Prompt",
+                        lines=1,
                         value=DEFAULT_EVAL_PROMPT,
                         placeholder="Type your eval prompt here... denote variables in {{curly brackets}} to be populated on the right.",
                         show_label=True
@@ -374,26 +403,24 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
 
                 # Right column - Variable Mapping
                 with gr.Column(scale=1):
-                    gr.Markdown("### Variable Mapping")
+                    gr.Markdown("### Sample to test the evaluator")
                     # Create inputs for up to 5 variables, with first two visible by default
                     variable_rows = []
                     for i in range(5):
                         initial_visibility = True if i < 2 else False
                         with gr.Group(visible=initial_visibility) as var_row:
-                            # Variable input with direct label
-                            initial_value = DEFAULT_INPUT if i == 0 else DEFAULT_RESPONSE
-                            initial_label = "input" if i == 0 else "response" if i == 1 else f"variable_{i+1}"
+                            # Set default labels for the first two inputs
+                            default_label = "input" if i == 0 else "response" if i == 1 else ""
                             var_input = gr.Textbox(
-                                label=initial_label,
-                                value=initial_value,
-                                container=True
+                                container=True,
+                                label=default_label  # Add default label here
                             )
                             variable_rows.append((var_row, var_input))
 
             # Send button
             with gr.Row(elem_classes="send-button-row"):
                 send_btn = gr.Button(
-                    value="Send",
+                    value="Test the evaluators",
                     variant="primary",
                     size="lg",
                     scale=1
@@ -439,28 +466,38 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
     # Define state variables for model tracking
     model_a_state = gr.State()
     model_b_state = gr.State()
+    final_prompt_state = gr.State()
 
     # Update variable inputs based on the eval prompt
     def update_variables(eval_prompt):
         variables = parse_variables(eval_prompt)
         updates = []
-        for i in range(5):
+
+        for i in range(len(variable_rows)):
             var_row, var_input = variable_rows[i]
             if i < len(variables):
+                var_name = variables[i]
+                # Set the number of lines based on the variable name
+                if var_name == 'response':
+                    lines = 4  # Adjust this number as needed
+                else:
+                    lines = 1  # Default to single line for other variables
                 updates.extend([
-                    gr.update(visible=True),  # var_row
-                    gr.update(value=f"**{variables[i]}:**"),  # var_input
-                    gr.update(visible=True)  # var_input
+                    gr.update(visible=True),  # Show the variable row
+                    gr.update(label=var_name, visible=True, lines=lines)  # Update label and lines
                 ])
             else:
                 updates.extend([
-                    gr.update(visible=False),  # var_row
-                    gr.update(),  # var_input
-                    gr.update(visible=False, value="")  # var_input
+                    gr.update(visible=False),  # Hide the variable row
+                    gr.update(value="", visible=False)  # Clear value when hidden
                 ])
         return updates
 
-    eval_prompt.change(fn=update_variables, inputs=eval_prompt, outputs=[item for sublist in variable_rows for item in sublist])
+    eval_prompt.change(
+        fn=update_variables,
+        inputs=eval_prompt,
+        outputs=[item for sublist in variable_rows for item in sublist]
+    )
 
     # Regenerate button functionality
     regenerate_button.click(
@@ -490,30 +527,36 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
     # Update the vote button click handlers
     vote_a.click(
         fn=lambda *args: vote('A', *args),
-        inputs=[model_a_state, model_b_state, eval_prompt, score_a, score_b, judge_id],
+        inputs=[model_a_state, model_b_state, final_prompt_state, score_a, critique_a, score_b, critique_b, judge_id],
         outputs=[action_buttons_row, model_name_a, model_name_b, send_btn, regenerate_button]
     )
 
     vote_b.click(
         fn=lambda *args: vote('B', *args),
-        inputs=[model_a_state, model_b_state, eval_prompt, score_a, score_b, judge_id],
+        inputs=[model_a_state, model_b_state, final_prompt_state, score_a, critique_a, score_b, critique_b, judge_id],
         outputs=[action_buttons_row, model_name_a, model_name_b, send_btn, regenerate_button]
     )
 
     vote_tie.click(
         fn=lambda *args: vote('Tie', *args),
-        inputs=[model_a_state, model_b_state, eval_prompt, score_a, score_b, judge_id],
+        inputs=[model_a_state, model_b_state, final_prompt_state, score_a, critique_a, score_b, critique_b, judge_id],
         outputs=[action_buttons_row, model_name_a, model_name_b, send_btn, regenerate_button]
     )
 
     # Update the send button handler to store the submitted inputs
     def submit_and_store(prompt, *variables):
-        last_submission.value = {"prompt": prompt, "variables": variables}
-        response_a, response_b, buttons_visible, regen_visible, model_a, model_b = submit_prompt(prompt, *variables)
+        # Create a copy of the current submission
+        current_submission = {"prompt": prompt, "variables": variables}
+        
+        # Get the responses
+        response_a, response_b, buttons_visible, regen_visible, model_a, model_b, final_prompt = submit_prompt(prompt, *variables)
         
         # Parse the responses
         score_a, critique_a = parse_model_response(response_a)
         score_b, critique_b = parse_model_response(response_b)
+        
+        # Update the last_submission state with the current values
+        last_submission.value = current_submission
         
         return (
             score_a,
@@ -521,9 +564,10 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
             score_b,
             critique_b,
             buttons_visible,
-            gr.update(visible=True),  # Show regenerate button
+            gr.update(visible=True, interactive=True),  # Show and enable regenerate button
             model_a,
             model_b,
+            final_prompt,  # Add final_prompt to state
             gr.update(value="*Model: Unknown*"),
             gr.update(value="*Model: Unknown*")
         )
@@ -540,7 +584,8 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
             regenerate_button,
             model_a_state,
             model_b_state,
-            model_name_a,    # Add model name outputs
+            final_prompt_state,  # Add final_prompt_state to outputs
+            model_name_a,
             model_name_b
         ]
     )
@@ -597,6 +642,45 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
         fn=refresh_leaderboard,
         inputs=None,
         outputs=[leaderboard_table, stats_display]
+    )
+
+    # Add click handlers for metric buttons
+    outputs_list = [eval_prompt] + [var_input for _, var_input in variable_rows]
+
+    custom_btn.click(
+        fn=lambda: set_example_metric("Custom"),
+        outputs=outputs_list
+    )
+
+    hallucination_btn.click(
+        fn=lambda: set_example_metric("Hallucination"),
+        outputs=outputs_list
+    )
+
+    precision_btn.click(
+        fn=lambda: set_example_metric("Precision"),
+        outputs=outputs_list
+    )
+
+    recall_btn.click(
+        fn=lambda: set_example_metric("Recall"),
+        outputs=outputs_list
+    )
+
+    coherence_btn.click(
+        fn=lambda: set_example_metric("Logical_Coherence"),
+        outputs=outputs_list
+    )
+
+    faithfulness_btn.click(
+        fn=lambda: set_example_metric("Faithfulness"),
+        outputs=outputs_list
+    )
+
+    # Set default metric at startup
+    demo.load(
+        fn=lambda: set_example_metric("Custom"),
+        outputs=[eval_prompt] + [var_input for _, var_input in variable_rows]
     )
 
 demo.launch()
