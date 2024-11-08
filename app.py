@@ -321,26 +321,23 @@ if __name__ == "__main__":
 with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
     judge_id = gr.State(get_new_session_id())
     gr.Markdown(MAIN_TITLE)
-    gr.Markdown(SUBTITLE)
+    gr.Markdown(HOW_IT_WORKS)
     
     with gr.Tabs():
         with gr.TabItem("Judge Arena"):
-            gr.Markdown(HOW_IT_WORKS)
             
             with gr.Row():
                 with gr.Column():
                     gr.Markdown(BATTLE_RULES)
-            
-            # Add heading for Eval Prompt
-            gr.Markdown("\n")
+                    gr.Markdown(EVAL_DESCRIPTION)
             
             # Eval Prompt and Variables side by side
             with gr.Row():
                 # Left column - Eval Prompt
                 with gr.Column(scale=1):
                     eval_prompt = gr.TextArea(
-                        label="Eval Prompt",
-                        lines=1, 
+                        label="Evaluator Prompt",
+                        lines=1,
                         value=DEFAULT_EVAL_PROMPT,
                         placeholder="Type your eval prompt here... denote variables in {{curly brackets}} to be populated on the right.",
                         show_label=True
@@ -348,7 +345,7 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
 
                 # Right column - Variable Mapping
                 with gr.Column(scale=1):
-                    gr.Markdown("### {{Input variables}} to be evaluated")
+                    gr.Markdown("### Sample to test the evaluator")
                     # Create inputs for up to 5 variables, with first two visible by default
                     variable_rows = []
                     for i in range(5):
@@ -367,7 +364,7 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
             # Send button
             with gr.Row(elem_classes="send-button-row"):
                 send_btn = gr.Button(
-                    value="Send",
+                    value="Test the evaluators",
                     variant="primary",
                     size="lg",
                     scale=1
