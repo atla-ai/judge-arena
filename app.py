@@ -352,21 +352,58 @@ def set_example_metric(metric_name):
         return [
             DEFAULT_EVAL_PROMPT,
             DEFAULT_INPUT,
-            DEFAULT_RESPONSE
+            DEFAULT_RESPONSE,
+            metric_name  # Return the selected metric name
         ]
     
     metric_data = EXAMPLE_METRICS[metric_name]
     return [
         metric_data["prompt"],
         metric_data["input"],
-        metric_data["response"]
+        metric_data["response"],
+        metric_name  # Return the selected metric name
     ]
 
 # Select random metric at startup
 def get_random_metric():
     metrics = list(EXAMPLE_METRICS.keys())
-    return set_example_metric(random.choice(metrics))
+    selected_metric = random.choice(metrics)
+    return set_example_metric(selected_metric)
 
+# Add this CSS to your CSS_STYLES constant or create it if it doesn't exist
+CSS_STYLES = """
+... existing styles ...
+.selected-button {
+    background-color: #2B3A55 !important;
+    color: white !important;
+}
+"""
+
+# Modify the set_example_metric function to return the metric name
+def set_example_metric(metric_name):
+    if metric_name == "Custom":
+        return [
+            DEFAULT_EVAL_PROMPT,
+            DEFAULT_INPUT,
+            DEFAULT_RESPONSE,
+            metric_name  # Return the selected metric name
+        ]
+    
+    metric_data = EXAMPLE_METRICS[metric_name]
+    return [
+        metric_data["prompt"],
+        metric_data["input"],
+        metric_data["response"],
+        metric_name  # Return the selected metric name
+    ]
+
+# Modify get_random_metric to return the selected metric
+def get_random_metric():
+    metrics = list(EXAMPLE_METRICS.keys())
+    selected_metric = random.choice(metrics)
+    return set_example_metric(selected_metric)
+
+# In your Gradio interface setup, add a State for tracking the selected metric
 with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
     judge_id = gr.State(get_new_session_id())
     gr.Markdown(MAIN_TITLE)
@@ -641,41 +678,53 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
         outputs=[leaderboard_table, stats_display]
     )
 
-    # Add click handlers for metric buttons
+    # Modify the button click handlers
+    def update_button_states(metric_name):
+        results = set_example_metric(metric_name)
+        button_states = {
+            "Custom": False,
+            "Hallucination": False,
+            "Precision": False,
+            "Recall": False,
+            "Logical coherence": False,
+            "Faithfulness": False
+        }
+        button_states[metric_name] = True
+        return [
+            results[0],  # eval_prompt
+            results[1],  # variable_rows[0][1]
+            results[2],  # variable_rows[1][1]
+            *[gr.update(variant="primary" if button_states[m] else "secondary") 
+              for m in button_states.keys()]
+        ]
+
+    # Update the button click handlers
     custom_btn.click(
-        fn=lambda: set_example_metric("Custom"),
-        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
+        fn=lambda: update_button_states("Custom"),
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1],
+                custom_btn, hallucination_btn, precision_btn, recall_btn, 
+                coherence_btn, faithfulness_btn]
     )
 
+    # Repeat for other buttons...
     hallucination_btn.click(
-        fn=lambda: set_example_metric("Hallucination"),
-        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
+        fn=lambda: update_button_states("Hallucination"),
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1],
+                custom_btn, hallucination_btn, precision_btn, recall_btn, 
+                coherence_btn, faithfulness_btn]
     )
 
-    precision_btn.click(
-        fn=lambda: set_example_metric("Precision"),
-        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
-    )
+    # ... (repeat for other buttons)
 
-    recall_btn.click(
-        fn=lambda: set_example_metric("Recall"),
-        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
-    )
+    # Modify the load event to set initial random metric
+    def init_random_metric():
+        return update_button_states(random.choice(list(EXAMPLE_METRICS.keys())))
 
-    coherence_btn.click(
-        fn=lambda: set_example_metric("Logical coherence"),
-        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
-    )
-
-    faithfulness_btn.click(
-        fn=lambda: set_example_metric("Faithfulness"),
-        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
-    )
-
-    # Set random metric at startup
     demo.load(
-        fn=get_random_metric,
-        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
+        fn=init_random_metric,
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1],
+                custom_btn, hallucination_btn, precision_btn, recall_btn, 
+                coherence_btn, faithfulness_btn]
     )
 
 demo.launch()
