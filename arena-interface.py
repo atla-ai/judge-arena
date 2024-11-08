@@ -14,8 +14,10 @@ load_dotenv()
 
 # Model and ELO score data
 DEFAULT_ELO = 1500  # Starting ELO for new models
+K_FACTOR = 32  # Standard chess K-factor, adjust as needed
 elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
+
 
 # Load the model_data from JSONL
 def load_model_data():
@@ -196,10 +198,6 @@ def regenerate_prompt(model_a, model_b, eval_prompt, *variable_values):
         model1,              # model_a_state
         model2               # model_b_state
     )
-
-# Add these constants at the top of your file
-K_FACTOR = 32  # Standard chess K-factor, adjust as needed
-DEFAULT_ELO = 1500  # Starting ELO for new models
 
 def calculate_elo_change(rating_a, rating_b, winner):
     """Calculate ELO rating changes for both players."""
@@ -523,7 +521,7 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
             score_b,
             critique_b,
             buttons_visible,
-            gr.update(visible=True),  # Changed from False to True to show regenerate button
+            gr.update(visible=True),  # Show regenerate button
             model_a,
             model_b,
             gr.update(value="*Model: Unknown*"),
