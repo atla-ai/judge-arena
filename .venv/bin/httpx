@@ -1,4 +1,4 @@
-#!/Users/kyle/Documents/GitHub/judge-arena-1/.venv/bin/python
+#!/Users/tobydrane/Documents/Repos/judge-arena/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

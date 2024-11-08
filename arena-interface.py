@@ -1,21 +1,27 @@
 from datetime import datetime
 import json
-import gradio as gr
 import re
 import random
 from collections import defaultdict
-import pandas as pd
 import os   
+
 from dotenv import load_dotenv
+load_dotenv()
+
+import gradio as gr
+import pandas as pd
 from gen_api_answer import get_model_response
+from db import add_vote, create_db_connection
+from utils import Vote
 from common import *
 
-load_dotenv() 
 
 # Model and ELO score data
 DEFAULT_ELO = 1500  # Starting ELO for new models
 elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
+
+db = create_db_connection()
 
 # Load the model_data from JSONL
 def load_model_data():
@@ -45,21 +51,17 @@ def get_new_session_id():
     return f"user{current_session_id}"
 
 def store_vote_data(prompt, response_a, response_b, model_a, model_b, winner, judge_id):
-    vote_entry = {
-        "timestamp": datetime.now().isoformat(),
-        "prompt": prompt,
-        "response_a": response_a,
-        "response_b": response_b,
-        "model_a": model_a,
-        "model_b": model_b,
-        "winner": winner,
-        "judge_id": judge_id,
-    }
-    voting_data.append(vote_entry)
-    
-    # Save to file after each vote
-    with open('voting_data.json', 'w') as f:
-        json.dump(voting_data, f, indent=2)
+    vote = Vote(
+        timestamp=datetime.now().isoformat(),
+        prompt=prompt,
+        response_a=response_a,
+        response_b=response_b,
+        model_a=model_a,
+        model_b=model_b,
+        winner=winner,
+        judge_id=judge_id,
+    )
+    add_vote(vote, db)
 
 def parse_variables(prompt):
     # Extract variables enclosed in double curly braces
@@ -219,28 +221,28 @@ def calculate_elo_change(rating_a, rating_b, winner):
     return change_a, change_b
 
 def update_leaderboard():
-    """Calculate current ELO ratings from voting history."""
+    """Calculate current ELO ratings from voting history in MongoDB."""
     ratings = defaultdict(lambda: DEFAULT_ELO)
     matches = defaultdict(int)
     wins = defaultdict(int)
-    
-    # Load voting data
-    try:
-        with open('voting_data.json', 'r') as f:
-            voting_data = json.load(f)
-    except FileNotFoundError:
-        return pd.DataFrame()
-    
+
+    # Fetch voting data from MongoDB
+    votes_collection = db.get_collection("votes")
+    current_time = datetime.now()
+    voting_data = list(
+        votes_collection.find({"timestamp": {"$lte": current_time.isoformat()}})
+    )
+
     # Process each vote
     for vote in voting_data:
-        model_a = vote['model_a']
-        model_b = vote['model_b']
-        winner = vote['winner']
-        
+        model_a = vote["model_a"]
+        model_b = vote["model_b"]
+        winner = vote["winner"]
+
         # Skip if models aren't in current model_data
         if model_a not in model_data or model_b not in model_data:
             continue
-        
+
         # Update match counts
         matches[model_a] += 1
         matches[model_b] += 1
@@ -251,30 +253,34 @@ def update_leaderboard():
         else:  # Handle ties
             wins[model_a] += 0.5
             wins[model_b] += 0.5
-        
+
         # Update ELO ratings
-        change_a, change_b = calculate_elo_change(ratings[model_a], ratings[model_b], winner)
+        change_a, change_b = calculate_elo_change(
+            ratings[model_a], ratings[model_b], winner
+        )
         ratings[model_a] += change_a
         ratings[model_b] += change_b
-    
+
     # Create leaderboard DataFrame
     leaderboard_data = []
     for model in model_data.keys():  # Only include current models
-        win_rate = (wins[model] / matches[model] * 100) if matches[model] > 0 else 0
-        ci = 1.96 * (400 / (matches[model] + 1) ** 0.5) if matches[model] > 0 else 0  # Confidence interval
-        leaderboard_data.append({
-            'Model': model,
-            'ELO': round(ratings[model], 1),
-            '95% CI': f"±{ci:.1f}",
-            'Matches': matches[model],
-            'Win Rate': f"{win_rate:.1f}%",
-            'Organization': model_data[model]['organization'],
-            'License': model_data[model]['license']
-        })
-    
+        votes = matches[model]
+        elo = ratings[model]
+        ci = 1.96 * (400 / (votes + 1) ** 0.5) if votes > 0 else 0  # Confidence interval
+        leaderboard_data.append(
+            {
+                "Model": model,
+                "ELO": round(elo, 2),
+                "95% CI": f"±{ci:.2f}",
+                "Matches": votes,
+                "Organization": model_data[model]["organization"],
+                "License": model_data[model]["license"],
+            }
+        )
+
     # Sort by ELO rating
     df = pd.DataFrame(leaderboard_data)
-    return df.sort_values('ELO', ascending=False).reset_index(drop=True)
+    return df.sort_values("ELO", ascending=False).reset_index(drop=True)
 
 # Update the display_leaderboard function
 def display_leaderboard():
@@ -317,22 +323,17 @@ def parse_model_response(response):
 
 def get_leaderboard_stats():
     """Get summary statistics for the leaderboard."""
-    try:
-        with open('voting_data.json', 'r') as f:
-            voting_data = json.load(f)
-        
-        total_votes = len(voting_data)
-        total_models = len(model_data)
-        last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
-        
-        return f"""
+    votes_collection = db.get_collection("votes")
+    total_votes = votes_collection.count_documents({})
+    total_models = len(model_data)
+    last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+
+    return f"""
 ### Leaderboard Stats
 - **Total Models**: {total_models}
 - **Total Votes**: {total_votes}
 - **Last Updated**: {last_updated}
 """
-    except FileNotFoundError:
-        return "No voting data available"
 
 def initialize_voting_data():
     """Initialize or clear the voting data file."""
