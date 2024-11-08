@@ -318,6 +318,55 @@ if __name__ == "__main__":
     
     # ... rest of your Gradio app setup ...
 
+# Example evaluation metrics data
+EXAMPLE_METRICS = {
+    "Hallucination": {
+        "prompt": DEFAULT_EVAL_PROMPT,  # We'll replace these with actual examples
+        "input": DEFAULT_INPUT,
+        "response": DEFAULT_RESPONSE
+    },
+    "Precision": {
+        "prompt": DEFAULT_EVAL_PROMPT,
+        "input": DEFAULT_INPUT,
+        "response": DEFAULT_RESPONSE
+    },
+    "Recall": {
+        "prompt": DEFAULT_EVAL_PROMPT,
+        "input": DEFAULT_INPUT,
+        "response": DEFAULT_RESPONSE
+    },
+    "Logical coherence": {
+        "prompt": DEFAULT_EVAL_PROMPT,
+        "input": DEFAULT_INPUT,
+        "response": DEFAULT_RESPONSE
+    },
+    "Faithfulness": {
+        "prompt": DEFAULT_EVAL_PROMPT,
+        "input": DEFAULT_INPUT,
+        "response": DEFAULT_RESPONSE
+    }
+}
+
+def set_example_metric(metric_name):
+    if metric_name == "Custom":
+        return [
+            DEFAULT_EVAL_PROMPT,
+            DEFAULT_INPUT,
+            DEFAULT_RESPONSE
+        ]
+    
+    metric_data = EXAMPLE_METRICS[metric_name]
+    return [
+        metric_data["prompt"],
+        metric_data["input"],
+        metric_data["response"]
+    ]
+
+# Select random metric at startup
+def get_random_metric():
+    metrics = list(EXAMPLE_METRICS.keys())
+    return set_example_metric(random.choice(metrics))
+
 with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
     judge_id = gr.State(get_new_session_id())
     gr.Markdown(MAIN_TITLE)
@@ -331,6 +380,16 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
                     gr.Markdown(BATTLE_RULES)
                     gr.Markdown(EVAL_DESCRIPTION)
             
+            # Add Example Metrics Section
+            with gr.Accordion("Example evaluation metrics", open=True):
+                with gr.Row():
+                    custom_btn = gr.Button("Custom", variant="secondary")
+                    hallucination_btn = gr.Button("Hallucination")
+                    precision_btn = gr.Button("Precision")
+                    recall_btn = gr.Button("Recall")
+                    coherence_btn = gr.Button("Logical coherence")
+                    faithfulness_btn = gr.Button("Faithfulness")
+
             # Eval Prompt and Variables side by side
             with gr.Row():
                 # Left column - Eval Prompt
@@ -580,6 +639,43 @@ with gr.Blocks(theme='default', css=CSS_STYLES) as demo:
         fn=refresh_leaderboard,
         inputs=None,
         outputs=[leaderboard_table, stats_display]
+    )
+
+    # Add click handlers for metric buttons
+    custom_btn.click(
+        fn=lambda: set_example_metric("Custom"),
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
+    )
+
+    hallucination_btn.click(
+        fn=lambda: set_example_metric("Hallucination"),
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
+    )
+
+    precision_btn.click(
+        fn=lambda: set_example_metric("Precision"),
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
+    )
+
+    recall_btn.click(
+        fn=lambda: set_example_metric("Recall"),
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
+    )
+
+    coherence_btn.click(
+        fn=lambda: set_example_metric("Logical coherence"),
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
+    )
+
+    faithfulness_btn.click(
+        fn=lambda: set_example_metric("Faithfulness"),
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
+    )
+
+    # Set random metric at startup
+    demo.load(
+        fn=get_random_metric,
+        outputs=[eval_prompt, variable_rows[0][1], variable_rows[1][1]]
     )
 
 demo.launch()
