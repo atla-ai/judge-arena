@@ -263,6 +263,9 @@ def get_leaderboard():
         }
         leaderboard.append(data)
 
+    # Sort leaderboard by ELO score in descending order
+    leaderboard.sort(key=lambda x: float(x["ELO Score"]), reverse=True)
+
     return leaderboard
 
 
