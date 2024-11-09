@@ -1,20 +1,30 @@
-from datetime import datetime
 import json
 import re
 import random
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 import gradio as gr
-import pandas as pd
 from gen_api_answer import get_model_response, parse_model_response
 from db import add_vote, create_db_connection, get_votes
 from utils import Vote
-from common import *
+from common import (
+    POLICY_CONTENT,
+    ACKNOWLEDGEMENTS,
+    DEFAULT_EVAL_PROMPT,
+    DEFAULT_INPUT,
+    DEFAULT_RESPONSE,
+    CSS_STYLES,
+    MAIN_TITLE,
+    HOW_IT_WORKS,
+    BATTLE_RULES,
+    EVAL_DESCRIPTION,
+    VOTING_HEADER,
+)
 from example_metrics import EXAMPLE_METRICS
 
 
@@ -25,10 +35,9 @@ elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
 
 db = create_db_connection()
-votes_collection = db.get_collection("votes")
+votes_collection = get_votes(db)
 
 current_time = datetime.now()
-voting_data = get_votes(db)
 
 
 # Load the model_data from JSONL
@@ -175,48 +184,75 @@ def vote(
     )
 
     # Return updates for UI components
-    return {
-        action_buttons_row: gr.update(visible=False),
-        model_name_a: gr.update(value=f"*Model: {model_a}*"),
-        model_name_b: gr.update(value=f"*Model: {model_b}*"),
-        send_btn: gr.update(interactive=True),
-        regenerate_button: gr.update(visible=True, interactive=True),
-    }
+    return [
+        gr.update(visible=False),  # action_buttons_row
+        gr.update(value=f"*Model: {model_a}*"),  # model_name_a
+        gr.update(value=f"*Model: {model_b}*"),  # model_name_b
+        gr.update(interactive=True),  # send_btn
+        gr.update(visible=True, interactive=True),  # regenerate_button
+    ]
+
+
+def get_current_votes():
+    """Get current votes from database."""
+    return get_votes(db)
 
 
 def get_leaderboard():
-    """Generate leaderboard data using votes from MongoDB."""
-    # Initialize scores and counts
+    """Generate leaderboard data using fresh votes from MongoDB."""
+    # Get fresh voting data
+    voting_data = get_current_votes()
+    print(f"Fetched {len(voting_data)} votes from database")  # Debug log
+
+    # Initialize dictionaries for tracking
     ratings = defaultdict(lambda: DEFAULT_ELO)
     matches = defaultdict(int)
 
-    # Process each vote to calculate ELO scores
+    # Process each vote
     for vote in voting_data:
-        model_a = vote["model_a"]
-        model_b = vote["model_b"]
-        winner = vote["winner"]
+        try:
+            model_a = vote.get("model_a")
+            model_b = vote.get("model_b")
+            winner = vote.get("winner")
 
-        # Skip if models aren't in current model_data
-        if model_a not in model_data or model_b not in model_data:
+            # Skip if models aren't in current model_data
+            if (
+                not all([model_a, model_b, winner])
+                or model_a not in model_data
+                or model_b not in model_data
+            ):
+                continue
+
+            # Update match counts
+            matches[model_a] += 1
+            matches[model_b] += 1
+
+            # Calculate ELO changes
+            elo_a = ratings[model_a]
+            elo_b = ratings[model_b]
+
+            # Expected scores
+            expected_a = 1 / (1 + 10 ** ((elo_b - elo_a) / 400))
+            expected_b = 1 - expected_a
+
+            # Actual scores
+            score_a = 1 if winner == "A" else 0 if winner == "B" else 0.5
+            score_b = 1 - score_a
+
+            # Update ratings
+            ratings[model_a] += K_FACTOR * (score_a - expected_a)
+            ratings[model_b] += K_FACTOR * (score_b - expected_b)
+
+        except Exception as e:
+            print(f"Error processing vote: {e}")
             continue
-
-        # Update match counts
-        matches[model_a] += 1
-        matches[model_b] += 1
-
-        # Calculate and update ELO changes
-        change_a, change_b = calculate_elo_change(
-            ratings[model_a], ratings[model_b], winner
-        )
-        ratings[model_a] += change_a
-        ratings[model_b] += change_b
 
     # Generate leaderboard data
     leaderboard = []
     for model in model_data.keys():
         votes = matches[model]
         elo = ratings[model]
-        ci = 1.96 * (400 / (votes + 1) ** 0.5) if votes > 0 else 0  # Confidence interval
+        ci = 1.96 * (400 / (votes + 1) ** 0.5) if votes > 0 else 0
         data = {
             "Model": model,
             "ELO Score": f"{elo:.2f}",
@@ -227,8 +263,6 @@ def get_leaderboard():
         }
         leaderboard.append(data)
 
-    # Sort by ELO score
-    leaderboard.sort(key=lambda x: float(x["ELO Score"]), reverse=True)
     return leaderboard
 
 
@@ -286,58 +320,45 @@ def calculate_elo_change(rating_a, rating_b, winner):
 
 
 def update_leaderboard():
-    ratings = defaultdict(lambda: DEFAULT_ELO)
+    """Generate leaderboard DataFrame using fresh votes from MongoDB."""
+    # Get fresh voting data
+    voting_data = get_current_votes()
+    print(f"Found {len(voting_data)} votes in database")
     matches = defaultdict(int)
-    wins = defaultdict(int)
 
-    # Process each vote
+    # Process each vote chronologically
     for vote in voting_data:
-        model_a = vote["model_a"]
-        model_b = vote["model_b"]
-        winner = vote["winner"]
+        # Extract model names from the vote document
+        try:
+            model_a = vote.get("model_a")
+            model_b = vote.get("model_b")
+            winner = vote.get("winner")
 
-        # Skip if models aren't in current model_data
-        if model_a not in model_data or model_b not in model_data:
+            print(f"Processing vote: {model_a} vs {model_b}, winner: {winner}")
+
+            # Skip if any required field is missing or models aren't in current model_data
+            if not all([model_a, model_b, winner]):
+                print(f"Missing required fields in vote: {vote}")
+                continue
+
+            if model_a not in model_data:
+                print(f"Model A '{model_a}' not found in model_data")
+                continue
+
+            if model_b not in model_data:
+                print(f"Model B '{model_b}' not found in model_data")
+                continue
+
+            # Update match counts
+            matches[model_a] += 1
+            matches[model_b] += 1
+            print(
+                f"Updated matches - {model_a}: {matches[model_a]}, {model_b}: {matches[model_b]}"
+            )
+        except Exception as e:
+            print(f"Error processing vote: {e}")
+            print(f"Problematic vote data: {vote}")
             continue
-
-        # Update match counts
-        matches[model_a] += 1
-        matches[model_b] += 1
-        if winner == "A":
-            wins[model_a] += 1
-        elif winner == "B":
-            wins[model_b] += 1
-        else:  # Handle ties
-            wins[model_a] += 0.5
-            wins[model_b] += 0.5
-
-        # Update ELO ratings
-        change_a, change_b = calculate_elo_change(
-            ratings[model_a], ratings[model_b], winner
-        )
-        ratings[model_a] += change_a
-        ratings[model_b] += change_b
-
-    # Create leaderboard DataFrame
-    leaderboard_data = []
-    for model in model_data.keys():  # Only include current models
-        votes = matches[model]
-        elo = ratings[model]
-        ci = 1.96 * (400 / (votes + 1) ** 0.5) if votes > 0 else 0  # Confidence interval
-        leaderboard_data.append(
-            {
-                "Model": model,
-                "ELO": round(elo, 2),
-                "95% CI": f"±{ci:.2f}",
-                "Matches": votes,
-                "Organization": model_data[model]["organization"],
-                "License": model_data[model]["license"],
-            }
-        )
-
-    # Sort by ELO rating
-    df = pd.DataFrame(leaderboard_data)
-    return df.sort_values("ELO", ascending=False).reset_index(drop=True)
 
 
 # Update the display_leaderboard function
@@ -361,8 +382,7 @@ leaderboard_table = gr.Dataframe(
 def get_leaderboard_stats():
     """Get summary statistics for the leaderboard."""
     now = datetime.now(timezone.utc)
-    votes_collection = db.get_collection("votes")
-    total_votes = votes_collection.count_documents({})
+    total_votes = len(get_current_votes())
     total_models = len(model_data)
     last_updated = now.replace(minute=0, second=0, microsecond=0).strftime(
         "%B %d, %Y at %H:00 UTC"
@@ -374,20 +394,6 @@ def get_leaderboard_stats():
 - **Total Votes**: {total_votes}
 - **Last Updated**: {last_updated}
 """
-
-
-def initialize_voting_data():
-    """Initialize or clear the voting data file."""
-    empty_data = []
-    with open("voting_data.json", "w") as f:
-        json.dump(empty_data, f)
-
-
-# Add this near the start of your app initialization, before the Gradio interface setup
-if __name__ == "__main__":
-    initialize_voting_data()
-
-    # ... rest of your Gradio app setup ...
 
 
 def set_example_metric(metric_name):
@@ -515,7 +521,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             stats_display = gr.Markdown()
             leaderboard_table = gr.Dataframe(
                 headers=["Model", "ELO", "95% CI", "Matches", "Organization", "License"],
-                datatype=["str", "number", "str", "number", "str", "str"],
+                datatype=["str", "number", "str", "number", "str", "str", "str"],
             )
 
         with gr.TabItem("Policy"):
@@ -740,6 +746,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
     # Update the leaderboard
     def refresh_leaderboard():
+        """Refresh the leaderboard data and stats."""
         leaderboard = get_leaderboard()
         data = [
             [
@@ -787,4 +794,5 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         outputs=[eval_prompt] + [var_input for _, var_input in variable_rows],
     )
 
-demo.launch()
+if __name__ == "__main__":
+    demo.launch()
