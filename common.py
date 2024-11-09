@@ -12,7 +12,7 @@ BATTLE_RULES = """
 - Both AIs stay anonymous - if either reveals its identity, the duel is void
 - Choose the LLM judge that most aligns with your judgement
 - If both score the same - choose the critique that you prefer more!
-<br><br>
+<br>
 """
 
 # CSS Styles
@@ -39,12 +39,12 @@ CSS_STYLES = """
 # Default Eval Prompt
 EVAL_DESCRIPTION = """
 ## 📝 Instructions
-**Precise evaluation criteria leads to more consistent and reliable judgments.** A good evaluation prompt should include the following elements:
+**Precise evaluation criteria lead to more consistent and reliable judgments.** A good Evaluator Prompt should include the following elements:
 - Evaluation criteria
 - Scoring rubric 
 - (Optional) Examples\n
 
-**Any variables you define in your prompt using {{double curly braces}} will automatically map to the corresponding input fields under "Sample to evaluate" section on the right.**
+**Any variables you define in your prompt using {{double curly braces}} will automatically map to the corresponding input fields under the "Sample to evaluate" section on the right.**
 
 <br><br>
 """
