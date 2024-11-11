@@ -3,7 +3,6 @@ import re
 import random
 from collections import defaultdict
 from datetime import datetime, timezone
-import hashlib
 
 from dotenv import load_dotenv
 
@@ -27,6 +26,8 @@ from common import (
     VOTING_HEADER,
 )
 from example_metrics import EXAMPLE_METRICS
+
+import hashlib
 
 
 # Model and ELO score data
@@ -61,10 +62,10 @@ def load_model_data():
 
 model_data = load_model_data()
 
+current_session_id = 0
 
-# Generate a unique session ID based on the user's IP address
-def get_new_session_id(request: gr.Request):
-    """Generate a unique session ID based on the user's IP address."""
+
+def get_ip(request: gr.Request):
     if "cf-connecting-ip" in request.headers:
         ip = request.headers["cf-connecting-ip"]
     elif "x-forwarded-for" in request.headers:
@@ -73,9 +74,13 @@ def get_new_session_id(request: gr.Request):
             ip = ip.split(",")[0]
     else:
         ip = request.client.host
-    
-    # Create a hash of the IP to maintain privacy
-    return f"user_{hashlib.md5(ip.encode()).hexdigest()[:8]}"
+    return ip
+
+
+def get_new_session_id(request: gr.Request):
+    ip = get_ip(request)
+    hashed_ip = hashlib.md5(ip.encode()).hexdigest()
+    return hashed_ip
 
 
 def store_vote_data(prompt, response_a, response_b, model_a, model_b, winner, judge_id):
@@ -154,8 +159,11 @@ def vote(
     critique_a,
     score_b,
     critique_b,
-    judge_id,
+    request: gr.Request,
 ):
+    # Generate judge_id from hashed IP
+    judge_id = get_new_session_id(request)
+
     # Update ELO scores based on user choice
     elo_a = elo_scores[model_a]
     elo_b = elo_scores[model_b]
@@ -443,7 +451,6 @@ def get_random_metric():
 
 
 with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
-    judge_id = gr.State(value=lambda: get_new_session_id(gr.Request.current()))
     gr.Markdown(MAIN_TITLE)
     gr.Markdown(HOW_IT_WORKS)
 
@@ -610,7 +617,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
     # Update the vote button click handlers
     vote_a.click(
-        fn=lambda *args: vote("A", *args),
+        fn=lambda *args, request=None: vote("A", *args, request=request),
         inputs=[
             model_a_state,
             model_b_state,
@@ -619,7 +626,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             critique_a,
             score_b,
             critique_b,
-            judge_id,
         ],
         outputs=[
             action_buttons_row,
@@ -631,7 +637,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
     )
 
     vote_b.click(
-        fn=lambda *args: vote("B", *args),
+        fn=lambda *args, request=None: vote("B", *args, request=request),
         inputs=[
             model_a_state,
             model_b_state,
@@ -640,7 +646,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             critique_a,
             score_b,
             critique_b,
-            judge_id,
         ],
         outputs=[
             action_buttons_row,
@@ -652,7 +657,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
     )
 
     vote_tie.click(
-        fn=lambda *args: vote("Tie", *args),
+        fn=lambda *args, request=None: vote("Tie", *args, request=request),
         inputs=[
             model_a_state,
             model_b_state,
@@ -661,7 +666,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             critique_a,
             score_b,
             critique_b,
-            judge_id,
         ],
         outputs=[
             action_buttons_row,
