@@ -3,6 +3,7 @@ import re
 import random
 from collections import defaultdict
 from datetime import datetime, timezone
+import hashlib
 
 from dotenv import load_dotenv
 
@@ -61,27 +62,6 @@ def load_model_data():
 
 
 model_data = load_model_data()
-
-current_session_id = 0
-
-
-def get_ip(request: gr.Request):
-    if "cf-connecting-ip" in request.headers:
-        ip = request.headers["cf-connecting-ip"]
-    elif "x-forwarded-for" in request.headers:
-        ip = request.headers["x-forwarded-for"]
-        if "," in ip:
-            ip = ip.split(",")[0]
-    else:
-        ip = request.client.host
-    return ip
-
-
-def get_new_session_id(request: gr.Request):
-    ip = get_ip(request)
-    hashed_ip = hashlib.md5(ip.encode()).hexdigest()
-    return hashed_ip
-
 
 def store_vote_data(prompt, response_a, response_b, model_a, model_b, winner, judge_id):
     vote = Vote(
@@ -150,6 +130,21 @@ def submit_prompt(eval_prompt, *variable_values):
         )
 
 
+def get_ip(request: gr.Request) -> str:
+    """Get and hash the IP address from the request."""
+    if "cf-connecting-ip" in request.headers:
+        ip = request.headers["cf-connecting-ip"]
+    elif "x-forwarded-for" in request.headers:
+        ip = request.headers["x-forwarded-for"]
+        if "," in ip:
+            ip = ip.split(",")[0]
+    else:
+        ip = request.client.host
+    
+    # Hash the IP address for privacy
+    return hashlib.sha256(ip.encode()).hexdigest()[:16]
+
+
 def vote(
     choice,
     model_a,
@@ -161,9 +156,9 @@ def vote(
     critique_b,
     request: gr.Request,
 ):
-    # Generate judge_id from hashed IP
-    judge_id = get_new_session_id(request)
-
+    # Get hashed IP as judge_id
+    judge_id = get_ip(request)
+    
     # Update ELO scores based on user choice
     elo_a = elo_scores[model_a]
     elo_b = elo_scores[model_b]
@@ -617,8 +612,9 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
     # Update the vote button click handlers
     vote_a.click(
-        fn=lambda *args, request=None: vote("A", *args, request=request),
+        fn=vote,
         inputs=[
+            gr.State("A"),  # Choice
             model_a_state,
             model_b_state,
             final_prompt_state,
@@ -637,8 +633,9 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
     )
 
     vote_b.click(
-        fn=lambda *args, request=None: vote("B", *args, request=request),
+        fn=vote,
         inputs=[
+            gr.State("B"),  # Choice
             model_a_state,
             model_b_state,
             final_prompt_state,
@@ -657,8 +654,9 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
     )
 
     vote_tie.click(
-        fn=lambda *args, request=None: vote("Tie", *args, request=request),
+        fn=vote,
         inputs=[
+            gr.State("Tie"),  # Choice
             model_a_state,
             model_b_state,
             final_prompt_state,
