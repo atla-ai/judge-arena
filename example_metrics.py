@@ -6,16 +6,12 @@ EXAMPLE_METRICS = {
 Score:
 A score of 0 means the response contains no contradictions to the ground truth.
 A score of 1 means the response contains contradictions to the ground truth.\n
-Here is the data:
-[BEGIN DATA]
-***
+
 [User Query]: {{input}}
-***
+
 [Ground Truth Response]: {{ground_truth}}
-***
-[Response]: {{response}}
-***
-[END DATA]""",
+
+[Response]: {{response}}""",
         "input": """Lichens are symbiotic organisms made of green algae and fungi. What do the green algae supply to the fungi in this symbiotic relationship?
 A) Carbon dioxide 
 B) Food
@@ -33,16 +29,12 @@ A score of 2 means the response includes some relevant information but is mostly
 A score of 3 means the response is somewhat relevant with a balanced mix of relevant and irrelevant information.
 A score of 4 means the response is mostly relevant, containing only minor irrelevant details.
 A score of 5 means the response is entirely relevant, perfectly aligning with the ground truth response without any irrelevant information.\n
-Here is the data:
-[BEGIN DATA]
-***
+
 [User Query]: {{input}}
-***
+
 [Ground Truth Response]: {{ground_truth}}
-***
-[Response]: {{response}}
-***
-[END DATA]""",
+
+[Response]: {{response}}""",
         # Example from Prometheus
         "input": "In a city, there are three different colored houses - red, blue, and yellow. The city council has made a rule that no two same colored houses can be adjacent to each other. A query is raised by the city planner who is designing the layout of the houses. The query is, 'Can you help me design a layout where I can place these houses without violating the rule of the city council?' The user didn't provide information about the total number of houses, the layout structure, or the proportion of house colors.",
         "ground_truth": "In order to provide an accurate layout design, I'll need a bit more information. Could you please specify how many houses in total are to be placed in the city? Also, it would be helpful to know the ratio of the different colored houses. Are there equal numbers of red, blue, and yellow houses, or does one color predominate? Furthermore, understanding the layout structure you have in mind is also important. Is it a linear layout, a circular one, a block-based one, or some other structure? Once I have these details, I'll be able to provide a more precise and useful answer.",
@@ -56,16 +48,12 @@ A score of 2 means the response includes only a few of the key facts and details
 A score of 3 means the response captures a moderate amount of the key facts and details from the ground truth.
 A score of 4 means the response includes most of the key facts and details from the ground truth.
 A score of 5 means the response perfectly captures all key facts and details from the ground truth without omission.\n
-Here is the data:
-[BEGIN DATA]
-***
+
 [User Query]: {{input}}
-***
+
 [Ground Truth Response]: {{ground_truth}}
-***
-[Response]: {{response}}
-***
-[END DATA]""",
+
+[Response]: {{response}}""",
         # Example from Prometheus
         "input": """There's a thing that's bothering me. It's related to a kind of fruit, but not really the usual ones we eat. It's sweet, crunchy, and a lot of people like it, but it's not something you'd normally find in a grocery store. What kind of fruit am I talking about?""",
         "ground_truth": """Based on your description, it seems like you might be referring to the 'honeycrisp apple'. While it is a type of fruit and is known for its sweetness and crunchiness, it's not as commonly found in grocery stores as other fruit varieties due to its specific growing requirements and seasonality. Its unique taste and texture make it a favorite among many people. However, it's important to note that there could potentially be other fruits that also fit the given description, as taste and texture can vary significantly among fruit varieties.""",
@@ -75,16 +63,14 @@ Here is the data:
         "prompt": """You are assessing a chat bot response to a user's input based on the logical coherence of the response.\n
 Score:
 A score of 1 means the response is illogical, contains internal contradictions, or has significant jumps in reasoning that make it hard to follow.
+A score of 2 means the response has minimal logical flow, contains inconsistencies, and shows only slight signs of rationality.
 A score of 3 means the response follows some logical flow but has minor inconsistencies or gaps in reasoning.
+A score of 4 means the response has a strong logical flow, is consistent with all provided information, and demonstrates clear rationality with only very minor errors.
 A score of 5 means the response is completely logically coherent, with clear connections between ideas and a natural progression of thought.\n
-Here is the data:
-[BEGIN DATA]
-***
+
 [User Query]: {{input}}
-***
-[Response]: {{response}}
-***
-[END DATA]""",
+
+[Response]: {{response}}""",
         # Example from RewardBench
         "input": "How did US states get their names?",
         "response": "US states got their names for a variety of reasons. Many are named after early explorers, leaders, or patriots. Some are named after geographical features, such as mountains or rivers. Others are named after plants or animals that are native to the state. Some are even named after historical figures or characters from literature or mythology.",
@@ -93,18 +79,16 @@ Here is the data:
         "prompt": """You are assessing a chat bot response to a user's input based on the faithfulness of the response to the context retrieved.\n
 Score:
 A score of 1 means that the response contains statements that directly contradict the context or are entirely unsupported by it.
+A score of 2 means that the response includes some information from the context, but contains significant ungrounded claims or misinterpretations.
 A score of 3 means that the response contains some statements that are not directly supported by the context.
+A score of 4 means that the response closely aligns with the context, with only rare and minor deviations.
 A score of 5 means that the response is fully grounded in the context, with all statements accurately reflecting the provided information.\n
-Here is the data:
-[BEGIN DATA]
-***
+
 [User Query]: {{input}}
-***
+
 [Retrieved Context]: {{context}}
-*** 
-[Response]: {{response}}
-***
-[END DATA]""",
+
+[Response]: {{response}}""",
         # Example from RAGTruth
         "input": "How to prepare to get an ultrasound?",
         "context": """Passage 1: 1 If you are just interested in checking the gender, you can go as early as 17 weeks. 2 Any earlier, and the results may not be accurate, leading to an extra coat of paint for your bedroom. 3 To get good pictures, 3D ultrasounds are best performed between 20 and 32 weeks, and the best pictures are between 24 and 30 weeks.""",

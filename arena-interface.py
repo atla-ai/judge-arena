@@ -311,8 +311,8 @@ def regenerate_prompt(model_a, model_b, eval_prompt, *variable_values):
         score_b,  # score_b textbox
         critique_b,  # critique_b textbox
         gr.update(visible=True),  # action_buttons_row
-        gr.update(value="*Model: Unknown*"),  # model_name_a
-        gr.update(value="*Model: Unknown*"),  # model_name_b
+        gr.update(value="*Model: Hidden*"),  # model_name_a
+        gr.update(value="*Model: Hidden*"),  # model_name_b
         model1,  # model_a_state
         model2,  # model_b_state
     )
@@ -457,7 +457,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             with gr.Row():
                 with gr.Column():
                     gr.Markdown(BATTLE_RULES)
-                    gr.Markdown(EVAL_DESCRIPTION)
 
             # Add Example Metrics Section
             with gr.Accordion("Evaluator Prompt Templates", open=False):
@@ -473,29 +472,40 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             with gr.Row():
                 # Left column - Eval Prompt
                 with gr.Column(scale=1):
+                    gr.Markdown("### Evaluator Prompt")
                     eval_prompt = gr.TextArea(
-                        label="Evaluator Prompt",
+                        label="",
                         lines=1,
-                        value=DEFAULT_EVAL_PROMPT,
+                        value=EXAMPLE_METRICS["Hallucination"]["prompt"],
                         placeholder="Type your eval prompt here... denote variables in {{curly brackets}} to be populated on the right.",
                         show_label=True,
                     )
 
                 # Right column - Variable Mapping
                 with gr.Column(scale=1):
-                    gr.Markdown("### Sample to test the evaluator")
+                    gr.Markdown("### Sample to evaluate")
                     # Create inputs for up to 5 variables, with first two visible by default
                     variable_rows = []
                     for i in range(5):
-                        initial_visibility = True if i < 2 else False
+                        initial_visibility = True if i < 3 else False
                         with gr.Group(visible=initial_visibility) as var_row:
-                            # Set default labels for the first two inputs
+                            # Set default labels and values from Hallucination example
                             default_label = (
-                                "input" if i == 0 else "response" if i == 1 else ""
+                                "input" if i == 0 
+                                else "ground_truth" if i == 1 
+                                else "response" if i == 2
+                                else ""
+                            )
+                            default_value = (
+                                EXAMPLE_METRICS["Hallucination"]["input"] if i == 0
+                                else EXAMPLE_METRICS["Hallucination"]["ground_truth"] if i == 1
+                                else EXAMPLE_METRICS["Hallucination"]["response"] if i == 2
+                                else ""
                             )
                             var_input = gr.Textbox(
                                 container=True,
-                                label=default_label,  # Add default label here
+                                label=default_label,
+                                value=default_value
                             )
                             variable_rows.append((var_row, var_input))
 
@@ -529,6 +539,11 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             regenerate_button = gr.Button(
                 "Regenerate with different models", variant="secondary", visible=False
             )
+
+            gr.Markdown("<br>")
+
+            # Add evaluation tips
+            gr.Markdown(EVAL_DESCRIPTION)
 
             # Add spacing and acknowledgements at the bottom
             gr.Markdown(ACKNOWLEDGEMENTS)
@@ -823,7 +838,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
     # Set default metric at startup
     demo.load(
-        fn=lambda: set_example_metric("Custom"),
+        fn=lambda: set_example_metric("Hallucination"),
         outputs=[eval_prompt] + [var_input for _, var_input in variable_rows],
     )
 

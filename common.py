@@ -1,18 +1,20 @@
 # Page Headers
-MAIN_TITLE = "# Judge Arena - Free LLM Evals to test your GenAI application"
+MAIN_TITLE = "# Judge Arena: Benchmarking LLMs as Evaluators"
 
 # How it works section
 HOW_IT_WORKS = """
-- **Run any form of evaluation:** from simple hallucination detection to qualitative interpretations
-- **Evaluate anything:** coding, analysis, creative writing, math, or general knowledge
+Vote to help the community find the best LLM-as-a-judge to use!
 """
 
 BATTLE_RULES = """
-## 🤺 Battle Rules:
-- Both AIs stay anonymous - if either reveals its identity, the duel is void
-- Choose the LLM judge that most aligns with your judgement
-- If both score the same - choose the critique that you prefer more!
-<br><br>
+## 🤺 Choose the winner
+1. Define your scoring criteria in the **Evaluator Prompt** 
+2. Add a test case to the **Sample to evaluate**
+3. Test the evaluators & vote for the model that best aligns with your judgement!
+\n
+Variables defined in your prompt with {{double curly braces}} map to input fields under **Sample to evaluate**.
+
+<br>
 """
 
 # CSS Styles
@@ -35,34 +37,25 @@ CSS_STYLES = """
         gap: 8px;
     }
 """
-
+    
 # Default Eval Prompt
 EVAL_DESCRIPTION = """
-## 📝 Instructions
+## 📝 Tips
 **Precise evaluation criteria leads to more consistent and reliable judgments.** A good evaluation prompt should include the following elements:
 - Evaluation criteria
 - Scoring rubric 
-- (Optional) Examples\n
-
-**Any variables you define in your prompt using {{double curly braces}} will automatically map to the corresponding input fields under "Sample to evaluate" section on the right.**
-
-<br><br>
+- Examples (Optional)
 """
 
-DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on [INSERT CRITERIA]
+DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on [WRITE CRITERIA HERE]
 
 Score:
 A score of 1 means that the response's answer meets all of the evaluation criteria.
 A score of 0 means that the response's answer does not meet all of the evaluation criteria.
 
-Here is the data:
-[BEGIN DATA]
-***
 [User Query]: {{input}}
-***
-[Response]: {{response}}
-***
-[END DATA]"""
+
+[Response]: {{response}}"""
 
 # Default Variable Values
 DEFAULT_INPUT = """Which of these animals is least likely to be found in a rainforest?"
@@ -79,7 +72,7 @@ VOTING_HEADER = """
 
 # Acknowledgements
 ACKNOWLEDGEMENTS = """
-<br><br><br>
+<br><br>
 # Acknowledgements
 
 We thank [LMSYS Org](https://lmsys.org/) for their hard work on the Chatbot Arena and fully credit them for the inspiration to build this.
