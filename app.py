@@ -3,6 +3,7 @@ import re
 import random
 from collections import defaultdict
 from datetime import datetime, timezone
+import hashlib
 
 from dotenv import load_dotenv
 
@@ -60,13 +61,21 @@ def load_model_data():
 
 model_data = load_model_data()
 
-current_session_id = 0
 
-
-def get_new_session_id():
-    global current_session_id
-    current_session_id += 1
-    return f"user{current_session_id}"
+# Generate a unique session ID based on the user's IP address
+def get_new_session_id(request: gr.Request):
+    """Generate a unique session ID based on the user's IP address."""
+    if "cf-connecting-ip" in request.headers:
+        ip = request.headers["cf-connecting-ip"]
+    elif "x-forwarded-for" in request.headers:
+        ip = request.headers["x-forwarded-for"]
+        if "," in ip:
+            ip = ip.split(",")[0]
+    else:
+        ip = request.client.host
+    
+    # Create a hash of the IP to maintain privacy
+    return f"user_{hashlib.md5(ip.encode()).hexdigest()[:8]}"
 
 
 def store_vote_data(prompt, response_a, response_b, model_a, model_b, winner, judge_id):
@@ -265,7 +274,7 @@ def get_leaderboard():
 
     # Sort leaderboard by ELO score in descending order
     leaderboard.sort(key=lambda x: float(x["ELO Score"]), reverse=True)
-    
+
     return leaderboard
 
 
@@ -434,7 +443,7 @@ def get_random_metric():
 
 
 with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
-    judge_id = gr.State(get_new_session_id())
+    judge_id = gr.State(lambda: get_new_session_id(gr.Request()))
     gr.Markdown(MAIN_TITLE)
     gr.Markdown(HOW_IT_WORKS)
 
