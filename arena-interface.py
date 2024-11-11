@@ -269,8 +269,8 @@ def get_leaderboard(show_preliminary=True):
         ci = 1.96 * (400 / (votes + 1) ** 0.5) if votes > 0 else 0
         data = {
             "Model": model,
-            "ELO Score": f"{elo:.2f}",
-            "95% CI": f"±{ci:.2f}",
+            "ELO Score": f"{int(elo)}",
+            "95% CI": f"±{int(ci)}",
             "# Votes": votes,
             "Organization": model_data[model]["organization"],
             "License": model_data[model]["license"],
