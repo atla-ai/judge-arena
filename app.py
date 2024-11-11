@@ -28,11 +28,9 @@ from common import (
 )
 from example_metrics import EXAMPLE_METRICS
 
-import hashlib
-
 
 # Model and ELO score data
-DEFAULT_ELO = 1500  # Starting ELO for new models
+DEFAULT_ELO = 1200  # Starting ELO for new models
 K_FACTOR = 32  # Standard chess K-factor, adjust as needed
 elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
@@ -210,7 +208,7 @@ def get_current_votes():
     return get_votes(db)
 
 
-def get_leaderboard():
+def get_leaderboard(show_preliminary=True):
     """Generate leaderboard data using fresh votes from MongoDB."""
     # Get fresh voting data
     voting_data = get_current_votes()
@@ -263,12 +261,16 @@ def get_leaderboard():
     leaderboard = []
     for model in model_data.keys():
         votes = matches[model]
+        # Skip models with < 500 votes if show_preliminary is False
+        if not show_preliminary and votes < 500:
+            continue
+            
         elo = ratings[model]
         ci = 1.96 * (400 / (votes + 1) ** 0.5) if votes > 0 else 0
         data = {
             "Model": model,
-            "ELO Score": f"{elo:.2f}",
-            "95% CI": f"±{ci:.2f}",
+            "ELO Score": f"{int(elo)}",
+            "95% CI": f"±{int(ci)}",
             "# Votes": votes,
             "Organization": model_data[model]["organization"],
             "License": model_data[model]["license"],
@@ -532,10 +534,50 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             gr.Markdown(ACKNOWLEDGEMENTS)
 
         with gr.TabItem("Leaderboard"):
+            with gr.Row():
+                with gr.Column(scale=1):
+                    show_preliminary = gr.Checkbox(
+                        label="Reveal preliminary results",
+                        value=True,  # Checked by default
+                        info="Show all models, including models with less few human ratings (< 500 votes)",
+                        interactive=True
+                    )
             stats_display = gr.Markdown()
             leaderboard_table = gr.Dataframe(
                 headers=["Model", "ELO", "95% CI", "Matches", "Organization", "License"],
                 datatype=["str", "number", "str", "number", "str", "str", "str"],
+            )
+
+            # Update refresh_leaderboard to use the checkbox value
+            def refresh_leaderboard(show_preliminary):
+                """Refresh the leaderboard data and stats."""
+                leaderboard = get_leaderboard(show_preliminary)
+                data = [
+                    [
+                        entry["Model"],
+                        float(entry["ELO Score"]),
+                        entry["95% CI"],
+                        entry["# Votes"],
+                        entry["Organization"],
+                        entry["License"],
+                    ]
+                    for entry in leaderboard
+                ]
+                stats = get_leaderboard_stats()
+                return [gr.update(value=data), gr.update(value=stats)]
+
+            # Add change handler for checkbox
+            show_preliminary.change(
+                fn=refresh_leaderboard,
+                inputs=[show_preliminary],
+                outputs=[leaderboard_table, stats_display]
+            )
+
+            # Update the load event
+            demo.load(
+                fn=refresh_leaderboard,
+                inputs=[show_preliminary],
+                outputs=[leaderboard_table, stats_display]
             )
 
         with gr.TabItem("Policy"):
@@ -757,29 +799,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             inputs=[eval_prompt] + [var_input for _, var_input in variable_rows],
             outputs=[send_btn, regenerate_button],
         )
-
-    # Update the leaderboard
-    def refresh_leaderboard():
-        """Refresh the leaderboard data and stats."""
-        leaderboard = get_leaderboard()
-        data = [
-            [
-                entry["Model"],
-                float(entry["ELO Score"]),
-                entry["95% CI"],
-                entry["# Votes"],
-                entry["Organization"],
-                entry["License"],
-            ]
-            for entry in leaderboard
-        ]
-        stats = get_leaderboard_stats()
-        return [gr.update(value=data), gr.update(value=stats)]
-
-    # Add the load event at the very end, just before demo.launch()
-    demo.load(
-        fn=refresh_leaderboard, inputs=None, outputs=[leaderboard_table, stats_display]
-    )
 
     # Add click handlers for metric buttons
     outputs_list = [eval_prompt] + [var_input for _, var_input in variable_rows]
