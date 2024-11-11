@@ -443,7 +443,7 @@ def get_random_metric():
 
 
 with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
-    judge_id = gr.State(lambda: get_new_session_id(gr.Request()))
+    judge_id = gr.State(value=lambda: get_new_session_id(gr.Request.current()))
     gr.Markdown(MAIN_TITLE)
     gr.Markdown(HOW_IT_WORKS)
 
