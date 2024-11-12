@@ -9,6 +9,37 @@ anthropic_client = anthropic.Anthropic()
 openai_client = OpenAI()
 together_client = Together()
 
+# Initialize OpenAI client
+
+EXAMPLE_GENERATION_PROMPT_SYSTEM = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes."""
+EXAMPLE_GENERATION_PROMPT_USER = """Please provide a random human message and an appropriate AI response in the format of an academic benchmark dataset e.g.,. User: "Hi, I'm trying to solve a crossword puzzle, but I've never done one of these before. Can you help me out?" / AI Response: "Absolutely! I'd be delighted to help you with your crossword puzzle. Just tell me the clues and the number of letters needed for each answer (and any letters you may have already filled in), and I'll do my best to help you find the solutions. If you have any specific questions about how to approach solving crossword puzzles in general, feel free to ask those as well!". Format the output as JSON:\n\n{\"human\": \"<human message>\", \"ai\": \"<AI assistant response>\"}"""
+
+def get_random_human_ai_pair():
+    # Use GPT-3.5 to generate a random conversation
+    completion = openai_client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": EXAMPLE_GENERATION_PROMPT_SYSTEM},
+            {"role": "user", "content": EXAMPLE_GENERATION_PROMPT_USER},
+        ],
+        max_completion_tokens=300,
+        temperature=1,
+    )
+    
+    # Parse the response to get the human input and AI response
+    raw_response = completion.choices[0].message.content.strip()
+    
+    try:
+        data = json.loads(raw_response)
+        human_message = data.get("human", "Hello, how are you?")
+        ai_message = data.get("ai", "I'm doing well, thank you!")
+    except json.JSONDecodeError:
+        # If parsing fails, set default messages
+        human_message = "Hello, how are you?"
+        ai_message = "I'm doing well, thank you!"
+    
+    return human_message, ai_message
+
 SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction. Your output format should strictly adhere to JSON as follows: {"feedback": "<write feedback>", "result": <numerical score>}. Ensure the output is valid JSON, without additional formatting or explanations."""
 
 
