@@ -47,7 +47,7 @@ EVAL_DESCRIPTION = """
 - Examples (Optional)
 """
 
-DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on [WRITE CRITERIA HERE]
+DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on how well it follows the user's instructions. Your evaluation should consider fac
 
 Score:
 A score of 1 means that the response's answer meets all of the evaluation criteria.
