@@ -524,12 +524,12 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                     gr.Markdown("### Model A")
                     score_a = gr.Textbox(label="Score", interactive=False)
                     critique_a = gr.TextArea(label="Critique", lines=8, interactive=False)
-                    model_name_a = gr.Markdown("*Model: Unknown*")
+                    model_name_a = gr.Markdown("*Model: Hidden*")
                 with gr.Column():
                     gr.Markdown("### Model B")
                     score_b = gr.Textbox(label="Score", interactive=False)
                     critique_b = gr.TextArea(label="Critique", lines=8, interactive=False)
-                    model_name_b = gr.Markdown("*Model: Unknown*")
+                    model_name_b = gr.Markdown("*Model: Hidden*")
 
             # Initially hide vote buttons and regenerate button
             with gr.Row(visible=False) as action_buttons_row:
@@ -766,8 +766,8 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_a,
             model_b,
             final_prompt,  # Add final_prompt to state
-            gr.update(value="*Model: Unknown*"),
-            gr.update(value="*Model: Unknown*"),
+            gr.update(value="*Model: Hidden*"),
+            gr.update(value="*Model: Hidden*"),
         )
 
     send_btn.click(
