@@ -201,6 +201,7 @@ def vote(
         gr.update(value=f"*Model: {model_a}*"),  # model_name_a
         gr.update(value=f"*Model: {model_b}*"),  # model_name_b
         gr.update(interactive=True, value="Run the evaluators", variant="primary"),  # send_btn
+        gr.update(visible=True),  # spacing_div
     ]
 
 
@@ -434,61 +435,59 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
     with gr.Tabs():
         with gr.TabItem("Judge Arena"):
+            random_btn = gr.Button("🎲", scale=0)
             with gr.Row():
                 # Left side - Input section
                 with gr.Column(scale=1):
-                    random_btn = gr.Button("🎲", scale=0)
                     with gr.Group():
                         human_input = gr.TextArea(
                             label="👩 Human Input",
-                            lines=8,
+                            lines=12,
                             placeholder="Enter the human message here..."
                         )
                         
                         ai_response = gr.TextArea(
                             label="🤖 AI Response", 
-                            lines=8,
+                            lines=12,
                             placeholder="Enter the AI response here..."
                         )
                         
-                        with gr.Row(elem_classes="send-button-row"):
-                            send_btn = gr.Button(
-                                value="Run the evaluators",
-                                variant="primary",
-                                size="lg"
-                            )
+                        send_btn = gr.Button(
+                            value="Run the evaluators",
+                            variant="primary",
+                            size="lg"
+                        )
 
                 # Right side - Model outputs
                 with gr.Column(scale=1):
-                    gr.Markdown("<br>")
-                    gr.Markdown("\n### 👩‍⚖️ Judge A")
+                    gr.Markdown("### 👩‍⚖️ Judge A")
                     with gr.Group():
+                        model_name_a = gr.Markdown("*Model: Hidden*")
                         with gr.Row():
                             with gr.Column(scale=1, min_width=100):  # Fixed narrow width for score
-                                score_a = gr.Textbox(label="Score", interactive=False)
+                                score_a = gr.Textbox(label="Score", lines=5, interactive=False)
                                 vote_a = gr.Button("Vote A", variant="primary", visible=False)
                             with gr.Column(scale=9, min_width=400):  # Wider width for critique
-                                critique_a = gr.TextArea(label="Critique", lines=8, interactive=False)
-                    model_name_a = gr.Markdown("*Model: Hidden*")
+                                critique_a = gr.TextArea(label="Critique", lines=7, interactive=False)
                 
-                    # Add spacing between judges
-                    gr.Markdown("<br>")
+                    # Spacing div that's visible only when tie button is hidden
+                    spacing_div = gr.HTML('<div style="height: 42px;"></div>', visible=True, elem_id="spacing-div")
                 
-                    # Center the Tie button between judges
+                    # Tie button row
                     with gr.Row(visible=False) as tie_button_row:
                         with gr.Column():
                             vote_tie = gr.Button("Tie", variant="secondary")
-                    gr.Markdown("<br>")
+                    
                 
-                    gr.Markdown("### 👩‍⚖️ Judge B")
+                    gr.Markdown("### 🧑‍⚖️ Judge B")
                     with gr.Group():
+                        model_name_b = gr.Markdown("*Model: Hidden*")
                         with gr.Row():
                             with gr.Column(scale=1, min_width=100):  # Fixed narrow width for score
-                                score_b = gr.Textbox(label="Score", interactive=False)
+                                score_b = gr.Textbox(label="Score", lines=5, interactive=False)
                                 vote_b = gr.Button("Vote B", variant="primary", visible=False)
                             with gr.Column(scale=9, min_width=400):  # Wider width for critique
-                                critique_b = gr.TextArea(label="Critique", lines=8, interactive=False)
-                    model_name_b = gr.Markdown("*Model: Hidden*")
+                                critique_b = gr.TextArea(label="Critique", lines=7, interactive=False)
                     # Place Vote B button directly under Judge B
                 
             gr.Markdown("<br>")
@@ -636,6 +635,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_a,
             model_name_b,
             send_btn,
+            spacing_div,
         ],
     )
 
@@ -658,6 +658,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_a,
             model_name_b,
             send_btn,
+            spacing_div,
         ],
     )
 
@@ -680,6 +681,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_a,
             model_name_b,
             send_btn,
+            spacing_div,
         ],
     )
 
@@ -703,6 +705,10 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         score_a, critique_a = parse_model_response(response_a)
         score_b, critique_b = parse_model_response(response_b)
 
+        # Format scores with "/ 5"
+        score_a = f"{score_a} / 5"
+        score_b = f"{score_b} / 5"
+
         # Update the last_submission state with the current values
         last_submission.value = current_submission
 
@@ -725,6 +731,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                 variant="secondary",
                 interactive=True
             ),
+            gr.update(visible=False),  # spacing_div
         )
 
     send_btn.click(
@@ -744,6 +751,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_a,
             model_name_b,
             send_btn,
+            spacing_div,
         ],
     )
 
@@ -823,6 +831,13 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         fn=handle_input_change,
         inputs=[],
         outputs=[send_btn]
+    )
+
+    # Update the demo.load to include the random example population
+    demo.load(
+        fn=populate_random_example,
+        inputs=[],
+        outputs=[human_input, ai_response]
     )
 
 if __name__ == "__main__":
