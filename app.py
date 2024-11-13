@@ -442,13 +442,13 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                     with gr.Group():
                         human_input = gr.TextArea(
                             label="👩 Human Input",
-                            lines=12,
+                            lines=13,
                             placeholder="Enter the human message here..."
                         )
                         
                         ai_response = gr.TextArea(
                             label="🤖 AI Response", 
-                            lines=12,
+                            lines=13,
                             placeholder="Enter the AI response here..."
                         )
                         
@@ -465,10 +465,10 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                         model_name_a = gr.Markdown("*Model: Hidden*")
                         with gr.Row():
                             with gr.Column(scale=1, min_width=100):  # Fixed narrow width for score
-                                score_a = gr.Textbox(label="Score", lines=5, interactive=False)
+                                score_a = gr.Textbox(label="Score", lines=6, interactive=False)
                                 vote_a = gr.Button("Vote A", variant="primary", visible=False)
                             with gr.Column(scale=9, min_width=400):  # Wider width for critique
-                                critique_a = gr.TextArea(label="Critique", lines=7, interactive=False)
+                                critique_a = gr.TextArea(label="Critique", lines=8, interactive=False)
                 
                     # Spacing div that's visible only when tie button is hidden
                     spacing_div = gr.HTML('<div style="height: 42px;"></div>', visible=True, elem_id="spacing-div")
@@ -484,10 +484,10 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                         model_name_b = gr.Markdown("*Model: Hidden*")
                         with gr.Row():
                             with gr.Column(scale=1, min_width=100):  # Fixed narrow width for score
-                                score_b = gr.Textbox(label="Score", lines=5, interactive=False)
+                                score_b = gr.Textbox(label="Score", lines=6, interactive=False)
                                 vote_b = gr.Button("Vote B", variant="primary", visible=False)
                             with gr.Column(scale=9, min_width=400):  # Wider width for critique
-                                critique_b = gr.TextArea(label="Critique", lines=7, interactive=False)
+                                critique_b = gr.TextArea(label="Critique", lines=8, interactive=False)
                     # Place Vote B button directly under Judge B
                 
             gr.Markdown("<br>")
