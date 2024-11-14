@@ -47,11 +47,14 @@ EVAL_DESCRIPTION = """
 - Examples (Optional)
 """
 
-DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on [WRITE CRITERIA HERE]
+DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on how well it follows the user's instructions. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of the response. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
 
 Score:
-A score of 1 means that the response's answer meets all of the evaluation criteria.
-A score of 0 means that the response's answer does not meet all of the evaluation criteria.
+Score 1: The response ignores or misinterprets instructions, providing irrelevant or inaccurate content that fails to address the request.
+Score 2: The response follows instructions partially but misses key elements, lacking depth or precision while containing minor inaccuracies.
+Score 3: The response follows main instructions adequately, providing correct and relevant information with reasonable depth.
+Score 4: The response follows instructions thoroughly with strong attention to detail, offering accurate, well-developed content that thoughtfully addresses needs.
+Score 5: The response demonstrates exceptional instruction following with precise, comprehensive content that shows both insight and perfect alignment with the request. 
 
 [User Query]: {{input}}
 
