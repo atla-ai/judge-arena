@@ -4,6 +4,7 @@ import random
 from collections import defaultdict
 from datetime import datetime, timezone
 import hashlib
+from typing import Dict, List
 
 from dotenv import load_dotenv
 
@@ -31,11 +32,16 @@ from common import (
     EVAL_DESCRIPTION,
     VOTING_HEADER,
 )
+from leaderboard import (
+    get_leaderboard,
+    get_leaderboard_stats,
+    calculate_elo_change,
+    get_model_rankings,
+    DEFAULT_ELO,
+    K_FACTOR
+)
 
 
-# Model and ELO score data
-DEFAULT_ELO = 1200  # Starting ELO for new models
-K_FACTOR = 32  # Standard chess K-factor, adjust as needed
 elo_scores = defaultdict(lambda: DEFAULT_ELO)
 vote_counts = defaultdict(int)
 
@@ -147,6 +153,30 @@ def get_ip(request: gr.Request) -> str:
     return hashlib.sha256(ip.encode()).hexdigest()[:16]
 
 
+def get_vote_message(choice: str, model_a: str, model_b: str) -> str:
+    """Generate appropriate message based on vote and model rankings."""
+    voting_data = get_current_votes()
+    leaderboard = get_leaderboard(model_data, voting_data, show_preliminary=True)
+    rankings = get_model_rankings(leaderboard)
+    pos_a = rankings.get(model_a, 0)
+    pos_b = rankings.get(model_b, 0)
+    
+    if choice == "Tie":
+        return f"It's a tie! Currently, {model_a} ranks #{pos_a} and {model_b} ranks #{pos_b}. \nYour votes shapes the leaderboard, carry on voting responsibly :)"
+    
+    # Get chosen and rejected models based on vote
+    model_chosen = model_a if choice == "A" else model_b
+    model_rejected = model_b if choice == "A" else model_a
+    pos_chosen = pos_a if choice == "A" else pos_b
+    pos_rejected = pos_b if choice == "A" else pos_a
+    
+    # Check if vote aligns with leaderboard
+    if (choice == "A" and pos_a < pos_b) or (choice == "B" and pos_b < pos_a):
+        return f"You're in touch with the community! {model_chosen} ranks #{pos_chosen} ahead of {model_rejected} in #{pos_rejected}. \nYour votes shapes the leaderboard, carry on voting responsibly :)"
+    else:
+        return f"You don't think like everyone else ;) {model_chosen} ranks #{pos_chosen} which is behind {model_rejected} in #{pos_rejected}. \nYour votes shapes the leaderboard, carry on voting responsibly :)"
+
+
 def vote(
     choice,
     model_a,
@@ -196,16 +226,20 @@ def vote(
     store_vote_data(
         final_prompt, response_a, response_b, model_a, model_b, choice, judge_id
     )
-
-    # Return updates for UI components with different variants based on choice
+    
+    # Generate vote message
+    message = get_vote_message(choice, model_a, model_b)
+    
+    # Return updates for UI components
     return [
         gr.update(interactive=False, variant="primary" if choice == "A" else "secondary"),  # vote_a
         gr.update(interactive=False, variant="primary" if choice == "B" else "secondary"),  # vote_b
         gr.update(interactive=False, variant="primary" if choice == "Tie" else "secondary"),  # vote_tie
         gr.update(value=f"*Model: {model_a}*"),  # model_name_a
         gr.update(value=f"*Model: {model_b}*"),  # model_name_b
-        gr.update(interactive=True, value="Regenerate with different Judges", variant="secondary"),  # send_btn
+        gr.update(interactive=True, value="Regenerate judges", variant="secondary"),  # send_btn
         gr.update(value="🎲 New round", variant="primary"),  # random_btn
+        gr.Info(message, title = "🥳 Thanks for your vote!"),  # success message
     ]
 
 
@@ -214,150 +248,24 @@ def get_current_votes():
     return get_votes(db)
 
 
-def get_leaderboard(show_preliminary=True):
-    """Generate leaderboard data using fresh votes from MongoDB."""
-    # Get fresh voting data
+# Update the refresh_leaderboard function
+def refresh_leaderboard(show_preliminary):
+    """Refresh the leaderboard data and stats."""
     voting_data = get_current_votes()
-    print(f"Fetched {len(voting_data)} votes from database")  # Debug log
-
-    # Initialize dictionaries for tracking
-    ratings = defaultdict(lambda: DEFAULT_ELO)
-    matches = defaultdict(int)
-
-    # Process each vote
-    for vote in voting_data:
-        try:
-            model_a = vote.get("model_a")
-            model_b = vote.get("model_b")
-            winner = vote.get("winner")
-
-            # Skip if models aren't in current model_data
-            if (
-                not all([model_a, model_b, winner])
-                or model_a not in model_data
-                or model_b not in model_data
-            ):
-                continue
-
-            # Update match counts
-            matches[model_a] += 1
-            matches[model_b] += 1
-
-            # Calculate ELO changes
-            elo_a = ratings[model_a]
-            elo_b = ratings[model_b]
-
-            # Expected scores
-            expected_a = 1 / (1 + 10 ** ((elo_b - elo_a) / 400))
-            expected_b = 1 - expected_a
-
-            # Actual scores
-            score_a = 1 if winner == "A" else 0 if winner == "B" else 0.5
-            score_b = 1 - score_a
-
-            # Update ratings
-            ratings[model_a] += K_FACTOR * (score_a - expected_a)
-            ratings[model_b] += K_FACTOR * (score_b - expected_b)
-
-        except Exception as e:
-            print(f"Error processing vote: {e}")
-            continue
-
-    # Generate leaderboard data
-    leaderboard = []
-    for model in model_data.keys():
-        votes = matches[model]
-        # Skip models with < 500 votes if show_preliminary is False
-        if not show_preliminary and votes < 500:
-            continue
-            
-        elo = ratings[model]
-        ci = 1.96 * (400 / (votes + 1) ** 0.5) if votes > 0 else 0
-        data = {
-            "Model": model,
-            "ELO Score": f"{int(elo)}",
-            "95% CI": f"±{int(ci)}",
-            "# Votes": votes,
-            "Organization": model_data[model]["organization"],
-            "License": model_data[model]["license"],
-        }
-        leaderboard.append(data)
-
-    # Sort leaderboard by ELO score in descending order
-    leaderboard.sort(key=lambda x: float(x["ELO Score"]), reverse=True)
-
-    return leaderboard
-
-
-def calculate_elo_change(rating_a, rating_b, winner):
-    """Calculate ELO rating changes for both players."""
-    expected_a = 1 / (1 + 10 ** ((rating_b - rating_a) / 400))
-    expected_b = 1 - expected_a
-
-    if winner == "A":
-        score_a, score_b = 1, 0
-    elif winner == "B":
-        score_a, score_b = 0, 1
-    else:  # Handle ties
-        score_a, score_b = 0.5, 0.5
-
-    change_a = K_FACTOR * (score_a - expected_a)
-    change_b = K_FACTOR * (score_b - expected_b)
-
-    return change_a, change_b
-
-
-def update_leaderboard():
-    """Generate leaderboard DataFrame using fresh votes from MongoDB."""
-    # Get fresh voting data
-    voting_data = get_current_votes()
-    print(f"Found {len(voting_data)} votes in database")
-    matches = defaultdict(int)
-
-    # Process each vote chronologically
-    for vote in voting_data:
-        # Extract model names from the vote document
-        try:
-            model_a = vote.get("model_a")
-            model_b = vote.get("model_b")
-            winner = vote.get("winner")
-
-            print(f"Processing vote: {model_a} vs {model_b}, winner: {winner}")
-
-            # Skip if any required field is missing or models aren't in current model_data
-            if not all([model_a, model_b, winner]):
-                print(f"Missing required fields in vote: {vote}")
-                continue
-
-            if model_a not in model_data:
-                print(f"Model A '{model_a}' not found in model_data")
-                continue
-
-            if model_b not in model_data:
-                print(f"Model B '{model_b}' not found in model_data")
-                continue
-
-            # Update match counts
-            matches[model_a] += 1
-            matches[model_b] += 1
-            print(
-                f"Updated matches - {model_a}: {matches[model_a]}, {model_b}: {matches[model_b]}"
-            )
-        except Exception as e:
-            print(f"Error processing vote: {e}")
-            print(f"Problematic vote data: {vote}")
-            continue
-
-
-# Update the display_leaderboard function
-def display_leaderboard():
-    df = update_leaderboard()
-    return gr.DataFrame(
-        value=df,
-        headers=["Model", "ELO", "95% CI", "Matches", "Organization", "License"],
-        datatype=["str", "number", "str", "number", "str", "str", "str"],
-        row_count=(len(df) + 1, "dynamic"),
-    )
+    leaderboard = get_leaderboard(model_data, voting_data, show_preliminary)
+    data = [
+        [
+            entry["Model"],
+            float(entry["ELO Score"]),
+            entry["95% CI"],
+            entry["# Votes"],
+            entry["Organization"],
+            entry["License"],
+        ]
+        for entry in leaderboard
+    ]
+    stats = get_leaderboard_stats(model_data, voting_data)
+    return [gr.update(value=data), gr.update(value=stats)]
 
 
 # Update the leaderboard table definition in the UI
@@ -365,57 +273,6 @@ leaderboard_table = gr.Dataframe(
     headers=["Model", "ELO", "95% CI", "Matches", "Organization", "License"],
     datatype=["str", "number", "str", "number", "str", "str", "str"],
 )
-
-
-def get_leaderboard_stats():
-    """Get summary statistics for the leaderboard."""
-    now = datetime.now(timezone.utc)
-    total_votes = len(get_current_votes())
-    total_models = len(model_data)
-    last_updated = now.replace(minute=0, second=0, microsecond=0).strftime(
-        "%B %d, %Y at %H:00 UTC"
-    )
-
-    return f"""
-### Leaderboard Stats
-- **Total Models**: {total_models}
-- **Total Votes**: {total_votes}
-- **Last Updated**: {last_updated}
-"""
-
-
-#def set_example_metric(metric_name):
-#    if metric_name == "Custom":
-#        variables = parse_variables(DEFAULT_EVAL_PROMPT)
-#        variable_values = []
-#        for var in variables:
-#            if var == "input":
-#                variable_values.append(DEFAULT_INPUT)
-#            elif var == "response":
-#                variable_values.append(DEFAULT_RESPONSE)
-#            else:
-#                variable_values.append("")  # Default empty value
-        # Pad variable_values to match the length of variable_rows
-#        while len(variable_values) < len(variable_rows):
-#            variable_values.append("")
-#        return [DEFAULT_EVAL_PROMPT] + variable_values
-
-#    metric_data = EXAMPLE_METRICS[metric_name]
-#    variables = parse_variables(metric_data["prompt"])
-#    variable_values = []
-#    for var in variables:
-#        value = metric_data.get(var, "")  # Default to empty string if not found
-#        variable_values.append(value)
-    # Pad variable_values to match the length of variable_rows
-#    while len(variable_values) < len(variable_rows):
-#        variable_values.append("")
-#    return [metric_data["prompt"]] + variable_values
-
-
-# Select random metric at startup
-#  def get_random_metric():
-#    metrics = list(EXAMPLE_METRICS.keys())
-#    return set_example_metric(random.choice(metrics))
 
 
 def populate_random_example(request: gr.Request):
@@ -455,7 +312,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                     with gr.Group():
                         human_input = gr.TextArea(
                             label="👩 Human Input",
-                            lines=13,
+                            lines=10,
                             placeholder="Enter the human message here..."
                         )
                         with gr.Row():
@@ -467,14 +324,14 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                         
                         ai_response = gr.TextArea(
                             label="🤖 AI Response", 
-                            lines=13,
+                            lines=15,
                             placeholder="Enter the AI response here..."
                         )
                         
                     with gr.Row():
                         random_btn = gr.Button("🎲", scale=2)
                         send_btn = gr.Button(
-                            value="Run the Judges",
+                            value="Run judges",
                             variant="primary",
                             size="lg",
                             scale=8
@@ -511,6 +368,10 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                 
             gr.Markdown("<br>")
 
+            # Add Evaluator Prompt Accordion
+            with gr.Accordion("📝 Evaluator Prompt", open=False):
+                gr.Markdown(f"```\n{DEFAULT_EVAL_PROMPT}\n```")
+
             # Add spacing and acknowledgements at the bottom
             gr.Markdown(ACKNOWLEDGEMENTS)
 
@@ -528,24 +389,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                 headers=["Model", "ELO", "95% CI", "Matches", "Organization", "License"],
                 datatype=["str", "number", "str", "number", "str", "str", "str"],
             )
-
-            # Update refresh_leaderboard to use the checkbox value
-            def refresh_leaderboard(show_preliminary):
-                """Refresh the leaderboard data and stats."""
-                leaderboard = get_leaderboard(show_preliminary)
-                data = [
-                    [
-                        entry["Model"],
-                        float(entry["ELO Score"]),
-                        entry["95% CI"],
-                        entry["# Votes"],
-                        entry["Organization"],
-                        entry["License"],
-                    ]
-                    for entry in leaderboard
-                ]
-                stats = get_leaderboard_stats()
-                return [gr.update(value=data), gr.update(value=stats)]
 
             # Add change handler for checkbox
             show_preliminary.change(
@@ -570,35 +413,35 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
     final_prompt_state = gr.State()
 
     # Update variable inputs based on the eval prompt
-    def update_variables(eval_prompt):
-        variables = parse_variables(eval_prompt)
-        updates = []
+    #def update_variables(eval_prompt):
+    #    variables = parse_variables(eval_prompt)
+    #    updates = []
 
-        for i in range(len(variable_rows)):
-            var_row, var_input = variable_rows[i]
-            if i < len(variables):
-                var_name = variables[i]
-                # Set the number of lines based on the variable name
-                if var_name == "response":
-                    lines = 4  # Adjust this number as needed
-                else:
-                    lines = 1  # Default to single line for other variables
-                updates.extend(
-                    [
-                        gr.update(visible=True),  # Show the variable row
-                        gr.update(
-                            label=var_name, visible=True, lines=lines
-                        ),  # Update label and lines
-                    ]
-                )
-            else:
-                updates.extend(
-                    [
-                        gr.update(visible=False),  # Hide the variable row
-                        gr.update(value="", visible=False),  # Clear value when hidden
-                    ]
-                )
-        return updates
+    #    for i in range(len(variable_rows)):
+    #        var_row, var_input = variable_rows[i]
+    #        if i < len(variables):
+    #            var_name = variables[i]
+    #            # Set the number of lines based on the variable name
+    #            if var_name == "response":
+    #                lines = 4  # Adjust this number as needed
+    #            else:
+    #                lines = 1  # Default to single line for other variables
+    #            updates.extend(
+    #                [
+    #                    gr.update(visible=True),  # Show the variable row
+    #                    gr.update(
+    #                        label=var_name, visible=True, lines=lines
+    #                    ),  # Update label and lines
+    #                ]
+    #            )
+    #        else:
+    #            updates.extend(
+    #                [
+    #                        gr.update(visible=False),  # Hide the variable row
+    #                        gr.update(value="", visible=False),  # Clear value when hidden
+    #                    ]
+    #            )
+    #    return updates
 
     #eval_prompt.change(
     #    fn=update_variables,
@@ -655,6 +498,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_b,
             send_btn,
             random_btn,
+            gr.State(),  # placeholder for success message
         ],
     )
 
@@ -678,6 +522,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_b,
             send_btn,
             random_btn,
+            gr.State(),  # placeholder for success message
         ],
     )
 
@@ -701,6 +546,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_b,
             send_btn,
             random_btn,
+            gr.State(),  # placeholder for success message
         ],
     )
 
@@ -745,7 +591,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             gr.update(value="*Model: Hidden*"),
             gr.update(value="*Model: Hidden*"),
             gr.update(
-                value="Regenerate with different Judges",
+                value="Regenerate judges",
                 variant="secondary",
                 interactive=True
             ),
@@ -854,7 +700,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             gr.update(interactive=False),  # vote_a
             gr.update(interactive=False),  # vote_b
             gr.update(interactive=False),  # vote_tie
-            gr.update(value="Run the Judges", variant="primary"),  # send_btn
+            gr.update(value="Run judges", variant="primary"),  # send_btn
             gr.update(value="🎲", variant="secondary"),  # random_btn
         ]
 
@@ -873,7 +719,11 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
     generate_btn.click(
         fn=lambda msg: (
-            *generate_ai_response(msg),  # Unpack response and button state
+            generate_ai_response(msg)[0],  # Only take the response text
+            gr.update(
+                value="Generate AI Response",  # Keep the label
+                interactive=False  # Disable the button
+            )
         ),
         inputs=[human_input],
         outputs=[ai_response, generate_btn]
