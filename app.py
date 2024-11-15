@@ -162,7 +162,7 @@ def get_vote_message(choice: str, model_a: str, model_b: str) -> str:
     pos_b = rankings.get(model_b, 0)
     
     if choice == "Tie":
-        return f"It's a tie! Currently, {model_a} ranks #{pos_a} and {model_b} ranks #{pos_b}. \nYour votes shapes the leaderboard, carry on voting responsibly :)"
+        return f"It's a tie! Currently, {model_a} ranks #{pos_a} and {model_b} ranks #{pos_b}. \n"
     
     # Get chosen and rejected models based on vote
     model_chosen = model_a if choice == "A" else model_b
@@ -172,9 +172,9 @@ def get_vote_message(choice: str, model_a: str, model_b: str) -> str:
     
     # Check if vote aligns with leaderboard
     if (choice == "A" and pos_a < pos_b) or (choice == "B" and pos_b < pos_a):
-        return f"You're in touch with the community! {model_chosen} ranks #{pos_chosen} ahead of {model_rejected} in #{pos_rejected}. \nYour votes shapes the leaderboard, carry on voting responsibly :)"
+        return f"You're in-line with the community! {model_chosen} ranks #{pos_chosen} ahead of {model_rejected} in #{pos_rejected}. \n"
     else:
-        return f"You don't think like everyone else ;) {model_chosen} ranks #{pos_chosen} which is behind {model_rejected} in #{pos_rejected}. \nYour votes shapes the leaderboard, carry on voting responsibly :)"
+        return f"You don't think like everyone else ;) {model_chosen} ranks #{pos_chosen} which is behind {model_rejected} in #{pos_rejected}. \n"
 
 
 def vote(
@@ -239,7 +239,7 @@ def vote(
         gr.update(value=f"*Model: {model_b}*"),  # model_name_b
         gr.update(interactive=True, value="Regenerate judges", variant="secondary"),  # send_btn
         gr.update(value="🎲 New round", variant="primary"),  # random_btn
-        gr.Info(message, title = "🥳 Thanks for your vote!"),  # success message
+        gr.Info(message, title = "🥳 Thanks for voting responsibly!"),  # success message
     ]
 
 
