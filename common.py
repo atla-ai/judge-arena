@@ -126,19 +126,19 @@ Judge Arena is specifically designed to assess AI models that function as evalua
 <br><br>
 # FAQ
 
--**Isn't this the same as Chatbot Arena?**
+- **Isn't this the same as Chatbot Arena?**
 
 We are big fans of what the LMSYS team have done with Chatbot Arena and fully credit them for the inspiration to develop this. We were looking for a dynamic leaderboard that graded on AI judge capabilities and didn't manage to find one, so we created Judge Arena. This UI is designed especially for evals; to match the format of the model-based eval prompts that you would use in your LLM evaluation / monitoring tool.
 
--**Why should I trust this leaderboard?**
+- **Why should I trust this leaderboard?**
 
 We have listed out our efforts to be fully transparent in the policies above. All of the code for this leaderboard is open-source and can be found on our [Github](https://github.com/atla-ai/judge-arena).
 
--**Who funds this effort?**
+- **Who funds this effort?**
 
 Atla currently funds this out of our own pocket. We are looking for API credits (with no strings attached) to support this effort - please get in touch if you or someone you know might be able to help.
 
--**What is Atla working on?**
+- **What is Atla working on?**
 
 We are training a general-purpose evaluator that you will soon be able to run in this Judge Arena. Our next step will be to open-source a powerful model that the community can use to run fast and accurate evaluations.
 <br><br>
