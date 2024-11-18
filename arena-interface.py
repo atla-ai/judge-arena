@@ -31,6 +31,8 @@ from common import (
     BATTLE_RULES,
     EVAL_DESCRIPTION,
     VOTING_HEADER,
+    DEFAULT_EVAL_PROMPT_EDITABLE,
+    FIXED_EVAL_SUFFIX,
 )
 from leaderboard import (
     get_leaderboard,
@@ -153,8 +155,10 @@ def get_ip(request: gr.Request) -> str:
     return hashlib.sha256(ip.encode()).hexdigest()[:16]
 
 
-def get_vote_message(choice: str, model_a: str, model_b: str) -> str:
-    """Generate appropriate message based on vote and model rankings."""
+def get_vote_message(choice: str, model_a: str, model_b: str) -> tuple[str, str]:
+    """Generate appropriate message based on vote and model rankings.
+    Returns (title, message) tuple."""
+    # Get current rankings
     voting_data = get_current_votes()
     leaderboard = get_leaderboard(model_data, voting_data, show_preliminary=True)
     rankings = get_model_rankings(leaderboard)
@@ -162,19 +166,13 @@ def get_vote_message(choice: str, model_a: str, model_b: str) -> str:
     pos_b = rankings.get(model_b, 0)
     
     if choice == "Tie":
-        return f"It's a tie! Currently, {model_a} ranks #{pos_a} and {model_b} ranks #{pos_b}. \nYour votes shapes the leaderboard, carry on voting responsibly :)"
-    
-    # Get chosen and rejected models based on vote
-    model_chosen = model_a if choice == "A" else model_b
-    model_rejected = model_b if choice == "A" else model_a
-    pos_chosen = pos_a if choice == "A" else pos_b
-    pos_rejected = pos_b if choice == "A" else pos_a
+        return "It's a tie!", "Keep voting responsibly 🤗"
     
     # Check if vote aligns with leaderboard
     if (choice == "A" and pos_a < pos_b) or (choice == "B" and pos_b < pos_a):
-        return f"You're in touch with the community! {model_chosen} ranks #{pos_chosen} ahead of {model_rejected} in #{pos_rejected}. \nYour votes shapes the leaderboard, carry on voting responsibly :)"
+        return "The favourite wins!", "Keep voting responsibly 🤗"
     else:
-        return f"You don't think like everyone else ;) {model_chosen} ranks #{pos_chosen} which is behind {model_rejected} in #{pos_rejected}. \nYour votes shapes the leaderboard, carry on voting responsibly :)"
+        return "The underdog wins!", "Keep voting responsibly 🤗"
 
 
 def vote(
@@ -227,19 +225,38 @@ def vote(
         final_prompt, response_a, response_b, model_a, model_b, choice, judge_id
     )
     
-    # Generate vote message
-    message = get_vote_message(choice, model_a, model_b)
+    # Get model positions for display
+    voting_data = get_current_votes()
+    leaderboard = get_leaderboard(model_data, voting_data, show_preliminary=True)
+    rankings = get_model_rankings(leaderboard)
+    pos_a = rankings.get(model_a, 0)
+    pos_b = rankings.get(model_b, 0)
     
-    # Return updates for UI components
+    # Format model names with positions and win/loss indicators
+    if choice == "Tie":
+        model_a_display = f"*Model: {model_a} (Position #{pos_a})*"
+        model_b_display = f"*Model: {model_b} (Position #{pos_b})*"
+    else:
+        winner = model_a if choice == "A" else model_b
+        loser = model_b if choice == "A" else model_a
+        winner_pos = pos_a if choice == "A" else pos_b
+        loser_pos = pos_b if choice == "A" else pos_a
+        
+        model_a_display = f"*Model: {model_a} {'✅' if choice == 'A' else '❌'} (Position #{pos_a})*"
+        model_b_display = f"*Model: {model_b} {'✅' if choice == 'B' else '❌'} (Position #{pos_b})*"
+    
+    # Generate vote message
+    title, message = get_vote_message(choice, model_a, model_b)
+    
     return [
         gr.update(interactive=False, variant="primary" if choice == "A" else "secondary"),  # vote_a
         gr.update(interactive=False, variant="primary" if choice == "B" else "secondary"),  # vote_b
         gr.update(interactive=False, variant="primary" if choice == "Tie" else "secondary"),  # vote_tie
-        gr.update(value=f"*Model: {model_a}*"),  # model_name_a
-        gr.update(value=f"*Model: {model_b}*"),  # model_name_b
+        gr.update(value=model_a_display),  # model_name_a
+        gr.update(value=model_b_display),  # model_name_b
         gr.update(interactive=True, value="Regenerate judges", variant="secondary"),  # send_btn
         gr.update(value="🎲 New round", variant="primary"),  # random_btn
-        gr.Info(message, title = "🥳 Thanks for your vote!"),  # success message
+        gr.Info(message, title=title),  # success message
     ]
 
 
@@ -311,7 +328,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                 with gr.Column(scale=1):
                     with gr.Group():
                         human_input = gr.TextArea(
-                            label="👩 Human Input",
+                            label="👩 User Input",
                             lines=10,
                             placeholder="Enter the human message here..."
                         )
@@ -368,12 +385,18 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                 
             gr.Markdown("<br>")
 
-            # Add Evaluator Prompt Accordion
+            # Update Evaluator Prompt Accordion
             with gr.Accordion("📝 Evaluator Prompt", open=False):
-                gr.Markdown(f"```\n{DEFAULT_EVAL_PROMPT}\n```")
-
-            # Add spacing and acknowledgements at the bottom
-            gr.Markdown(ACKNOWLEDGEMENTS)
+                eval_prompt_editable = gr.TextArea(
+                    value=DEFAULT_EVAL_PROMPT_EDITABLE,
+                    label="Evaluation Criteria",
+                    lines=12
+                )
+                with gr.Row(visible=False) as edit_buttons_row:  # Make buttons row initially hidden
+                    cancel_prompt_btn = gr.Button("Cancel")
+                    save_prompt_btn = gr.Button("Save", variant="primary")
+                gr.Markdown("*The sample being evaluated is always appended as:*")
+                gr.Markdown(f"```{FIXED_EVAL_SUFFIX}")
 
         with gr.TabItem("Leaderboard"):
             with gr.Row():
@@ -406,11 +429,14 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
         with gr.TabItem("Policy"):
             gr.Markdown(POLICY_CONTENT)
+            gr.Markdown(ACKNOWLEDGEMENTS)
 
     # Define state variables for model tracking
     model_a_state = gr.State()
     model_b_state = gr.State()
     final_prompt_state = gr.State()
+    eval_prompt_previous = gr.State(value=DEFAULT_EVAL_PROMPT_EDITABLE)  # Initialize with default value
+    is_editing = gr.State(False)  # Track editing state
 
     # Update variable inputs based on the eval prompt
     #def update_variables(eval_prompt):
@@ -550,12 +576,50 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         ],
     )
 
-    # Update the send button handler to store the submitted inputs
-    def submit_and_store(prompt, *variables):
-        # Create a copy of the current submission
-        current_submission = {"prompt": prompt, "variables": variables}
+    # Add handlers for save/cancel buttons
+    def save_prompt(new_prompt, previous_prompt):
+        return [
+            gr.update(value=new_prompt),  # Update the prompt
+            new_prompt,  # Update the previous prompt state
+            gr.update(visible=False)  # Hide the buttons
+        ]
 
-        # Get the responses
+    def cancel_prompt(previous_prompt):
+        return [
+            gr.update(value=previous_prompt),  # Revert to previous prompt
+            previous_prompt,  # Keep the previous prompt state
+            gr.update(visible=False)  # Hide the buttons
+        ]
+
+    def show_edit_buttons(current_value, previous_value):
+        # Show buttons only if the current value differs from the previous value
+        return gr.update(visible=current_value != previous_value)
+
+    # Add handlers for save/cancel buttons and prompt changes
+    save_prompt_btn.click(
+        fn=save_prompt,
+        inputs=[eval_prompt_editable, eval_prompt_previous],
+        outputs=[eval_prompt_editable, eval_prompt_previous, edit_buttons_row]
+    )
+
+    cancel_prompt_btn.click(
+        fn=cancel_prompt,
+        inputs=[eval_prompt_previous],
+        outputs=[eval_prompt_editable, eval_prompt_previous, edit_buttons_row]
+    )
+
+    eval_prompt_editable.change(
+        fn=show_edit_buttons,
+        inputs=[eval_prompt_editable, eval_prompt_previous],
+        outputs=edit_buttons_row
+    )
+
+    # Update the submit function to combine editable and fixed parts
+    def submit_and_store(editable_prompt, *variables):
+        # Combine the editable prompt with fixed suffix
+        full_prompt = editable_prompt + FIXED_EVAL_SUFFIX
+        
+        # Get the responses using the full prompt
         (
             response_a,
             response_b,
@@ -564,18 +628,19 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_a,
             model_b,
             final_prompt,
-        ) = submit_prompt(prompt, *variables)
+        ) = submit_prompt(full_prompt, *variables)
 
         # Parse the responses
         score_a, critique_a = parse_model_response(response_a)
         score_b, critique_b = parse_model_response(response_b)
 
-        # Format scores with "/ 5"
-        score_a = f"{score_a} / 5"
-        score_b = f"{score_b} / 5"
+        # Only append "/ 5" if using the default prompt
+        if editable_prompt.strip() == DEFAULT_EVAL_PROMPT_EDITABLE.strip():
+            score_a = f"{score_a} / 5"
+            score_b = f"{score_b} / 5"
 
         # Update the last_submission state with the current values
-        last_submission.value = current_submission
+        last_submission.value = {"prompt": full_prompt, "variables": variables}
 
         return (
             score_a,
@@ -598,9 +663,10 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             gr.update(value="🎲"),  # random_btn
         )
 
+    # Update the click handler to use the editable prompt
     send_btn.click(
         fn=submit_and_store,
-        inputs=[eval_prompt, human_input, ai_response],
+        inputs=[eval_prompt_editable, human_input, ai_response],
         outputs=[
             score_a,
             critique_a,
