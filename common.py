@@ -47,18 +47,34 @@ EVAL_DESCRIPTION = """
 - Examples (Optional)
 """
 
-DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on how well it follows the user's instructions. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of the response. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
+DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input. Your evaluation should focus on the helpfulness of the response given the user's instructions. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
 
-Score:
-Score 1: The response ignores or misinterprets instructions, providing irrelevant or inaccurate content that fails to address the request.
-Score 2: The response follows instructions partially but misses key elements, lacking depth or precision while containing minor inaccuracies.
-Score 3: The response follows main instructions adequately, providing correct and relevant information with reasonable depth.
-Score 4: The response follows instructions thoroughly with strong attention to detail, offering accurate, well-developed content that thoughtfully addresses needs.
-Score 5: The response demonstrates exceptional instruction following with precise, comprehensive content that shows both insight and perfect alignment with the request. 
+Scoring Rubric:
+Score 1: The response is unhelpful, providing irrelevant or incorrect content that does not address the request.
+Score 2: The response is partially helpful, missing key elements or including minor inaccuracies, and lacks depth in addressing the request.
+Score 3: The response is adequately helpful, correctly addressing the main request with relevant information and some depth.
+Score 4: The response is very helpful, addressing the request thoroughly with accurate and detailed content, but may lack a minor aspect of helpfulness.
+Score 5: The response is exceptionally helpful, providing precise, comprehensive content that fully resolves the request with insight and clarity.
 
 [User Query]: {{input}}
 
-[Response]: {{response}}"""
+[AI Response]: {{response}}"""
+
+# Split the eval prompt into editable and fixed parts
+DEFAULT_EVAL_PROMPT_EDITABLE = """You are assessing a chat bot response to a user's input. Your evaluation should focus on the helpfulness of the response given the user's instructions. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
+
+Scoring Rubric:
+Score 1: The response is unhelpful, providing irrelevant or incorrect content that does not address the request.
+Score 2: The response is partially helpful, missing key elements or including minor inaccuracies, and lacks depth in addressing the request.
+Score 3: The response is adequately helpful, correctly addressing the main request with relevant information and some depth.
+Score 4: The response is very helpful, addressing the request thoroughly with accurate and detailed content, but may lack a minor aspect of helpfulness.
+Score 5: The response is exceptionally helpful, providing precise, comprehensive content that fully resolves the request with insight and clarity."""
+
+# Fixed suffix that will always be appended
+FIXED_EVAL_SUFFIX = """
+[User Query]: {{input}}
+
+[AI Response]: {{response}}"""
 
 # Default Variable Values
 DEFAULT_INPUT = """Which of these animals is least likely to be found in a rainforest?"
@@ -127,19 +143,24 @@ Judge Arena is specifically designed to assess AI models that function as evalua
 # FAQ
 
 **Isn't this the same as Chatbot Arena?**
+
 We are big fans of what the LMSYS team have done with Chatbot Arena and fully credit them for the inspiration to develop this. We were looking for a dynamic leaderboard that graded on AI judge capabilities and didn't manage to find one, so we created Judge Arena. This UI is designed especially for evals; to match the format of the model-based eval prompts that you would use in your LLM evaluation / monitoring tool.
 
 **Why should I trust this leaderboard?**
-We have listed out our efforts to be fully transparent in the policies above. All of the code for this leaderboard is open-source and can be found on our [Github](https://github.com/atla-ai/judge-arena).
+
+We have listed out our efforts to be fully transparent in the policies above. All of the code for this leaderboard is open-source and can be found on our [Github](https://github.com/atla-ai/judge-arena). Check out our [blog](https://www.atla-ai.com/blog) to stay up to date as we analyse the results from the leaderboard.
 
 **Who funds this effort?**
+
 Atla currently funds this out of our own pocket. We are looking for API credits (with no strings attached) to support this effort - please get in touch if you or someone you know might be able to help.
 
 **What is Atla working on?**
+
 We are training a general-purpose evaluator that you will soon be able to run in this Judge Arena. Our next step will be to open-source a powerful model that the community can use to run fast and accurate evaluations.
 <br><br>
 # Get in touch
-Feel free to email us at [support@atla-ai.com](mailto:support@atla-ai.com) or leave feedback on our [Github](https://github.com/atla-ai/judge-arena)!"""
+We’d love to hear your feedback! For general feature requests or to submit / suggest new models to add to the arena, please open up a discussion in the [community](https://huggingface.co/spaces/AtlaAI/judge-arena/discussions) tab. You can also contact us directly on [X](https://x.com/Atla_AI) or [Discord](https://discord.gg/yNpUAMqs).
+\nPlease file any issues on our [Github](https://github.com/atla-ai/judge-arena)."""
 
 
 
