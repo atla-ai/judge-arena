@@ -47,15 +47,34 @@ EVAL_DESCRIPTION = """
 - Examples (Optional)
 """
 
-DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on [WRITE CRITERIA HERE]
+DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on how well it follows the user's instructions. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of the response. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
 
-Score:
-A score of 1 means that the response's answer meets all of the evaluation criteria.
-A score of 0 means that the response's answer does not meet all of the evaluation criteria.
+Scoring Rubric:
+Score 1: The response ignores or misinterprets instructions, providing irrelevant or inaccurate content that fails to address the request.
+Score 2: The response follows instructions partially but misses key elements, lacking depth or precision while containing minor inaccuracies.
+Score 3: The response follows main instructions adequately, providing correct and relevant information with reasonable depth.
+Score 4: The response follows instructions thoroughly with strong attention to detail, offering accurate, well-developed content that thoughtfully addresses needs.
+Score 5: The response demonstrates exceptional instruction following with precise, comprehensive content that shows both insight and perfect alignment with the request. 
 
 [User Query]: {{input}}
 
-[Response]: {{response}}"""
+[AI Response]: {{response}}"""
+
+# Split the eval prompt into editable and fixed parts
+DEFAULT_EVAL_PROMPT_EDITABLE = """You are assessing a chat bot response to a user's input based on how well it follows the user's instructions. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of the response. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
+
+Scoring Rubric:
+Score 1: The response ignores or misinterprets instructions, providing irrelevant or inaccurate content that fails to address the request.
+Score 2: The response follows instructions partially but misses key elements, lacking depth or precision while containing minor inaccuracies.
+Score 3: The response follows main instructions adequately, providing correct and relevant information with reasonable depth.
+Score 4: The response follows instructions thoroughly with strong attention to detail, offering accurate, well-developed content that thoughtfully addresses needs.
+Score 5: The response demonstrates exceptional instruction following with precise, comprehensive content that shows both insight and perfect alignment with the request."""
+
+# Fixed suffix that will always be appended
+FIXED_EVAL_SUFFIX = """
+[User Query]: {{input}}
+
+[AI Response]: {{response}}"""
 
 # Default Variable Values
 DEFAULT_INPUT = """Which of these animals is least likely to be found in a rainforest?"
@@ -88,53 +107,48 @@ Atla is an applied research organization that trains models as evaluators to cap
 <br><br>
 # Our Mission
 
-By creating advanced evaluation models, we enable AI developers to identify and fix risks, leading to safer, more reliable AI that can be trusted and widely used. Our aim is to surpass the current state-of-the-art evaluation methods by training models specifically for evaluation. AIs will probably become very powerful, and perform tasks that are difficult for us to verify. We want to enable humans to oversee AI systems that are solving tasks too difficult for humans to evaluate. We have written more about [our approach to scalable oversight](https://www.atla-ai.com/post/scaling-alignment) on our blog.
+By creating advanced evaluation models, we enable AI developers to identify and fix risks, leading to safer, more reliable AI that can be trusted and widely used. Our aim is to surpass the current state-of-the-art evaluation methods by training models specifically for evaluation. AIs will probably become very powerful, and perform tasks that are difficult for us to verify. We want to enable humans to oversee AI systems that are solving tasks too difficult for humans to evaluate. 
+Read more about [our approach to scalable oversight](https://www.atla-ai.com/post/scaling-alignment) on our blog.
 <br><br>
 # Judge Arena Policy
 
 ## Overview
 
-Judge Arena is an open-source platform dedicated to improving the standard of evaluation of generative AI models in their role as judges. Users can run evals and assess anonymized responses from two competing model judges, choosing the better judgement or declaring a tie. This policy outlines our commitments to maintain a fair, open, and collaborative environment :)
+Judge Arena is an open-source platform dedicated to determining which models make the best judges. Users can run evals and assess anonymized responses from two competing model judges, choosing the better judgement or declaring a tie. This policy outlines our commitments to maintain a fair and open environment :)
 
 ## Transparency
 
 - **Open-Source**: Judge Arena's code is open-source and available on GitHub. We encourage contributions from the community and anyone can replicate or modify the platform to suit their needs. We use proprietary model provider APIs where provided and Together AI's API to serve leading open-source models.
-- **Methodology**: All processes related to model evaluation, rating calculations, and model selection are openly documented. We'd like to ensure that our ranking system is understandable and reproducible by others!
+- **Methodology**: All processes related to model evaluation, rating calculations, and model selection are openly documented. 
 - **Data Sharing**: Periodically, we'll share 20% of the collected evaluation data with the community. The data collected from Judge Arena is restricted to an anonymized user ID, the final prompt sent, the model responses, the user vote, and the timestamp.
 
 ## Model Inclusion Criteria
 
 Judge Arena is specifically designed to assess AI models that function as evaluators (a.k.a judges). This includes but is not limited to powerful general-purpose models and the latest language models designed for evaluation tasks. Models are eligible for inclusion if they meet the following criteria:
 
-- **Judge Capability**: The model should possess the ability to score AND critique responses, content, or other models' outputs effectively.
-- **Adaptable:** The model must be prompt-able to be evaluate in different scoring formats, for different criteria.
+- **Judge Capability**: The model should possess the ability to score AND critique other models' outputs effectively.
+- **Promptable:** The model must be promptable to be evaluate in different scoring formats, for different criteria.
 - **Accessibility**:
    - **Public API Access**: Models accessible through public APIs without restrictive barriers.
    - **Open-Source Models**: Models with publicly available weights that can be downloaded and run by the community.
 
 ## Leaderboard Management
 
-- **ELO Ranking System**: Models are ranked on a public leaderboard based on aggregated user evaluations. We use an ELO rating system to rank AI judges on the public leaderboard. Each model begins with an initial rating of 1500 (as is used by the International Chess Federation), and we use a K-factor of 32 to determine the maximum rating adjustment after each evaluation.
+- **ELO Ranking System**: Models are ranked on a public leaderboard based on aggregated user evaluations. We use an ELO rating system to rank AI judges on the public leaderboard. Each model begins with an initial rating of 1200, and we use a K-factor of 32 to determine the maximum rating adjustment after each evaluation.
 - **Minimum Period**: Listed models remain accessible on Judge Arena for a minimum period of two weeks so they can be comprehensively evaluated.
 - **Deprecation Policy**: Models may be removed from the leaderboard if they become inaccessible or are no longer publicly available.
 
-This policy might be updated to reflect changes in our practices or in response to community feedback.
-
+*This policy might be updated to reflect changes in our practices or in response to community feedback.*
+<br><br>
 # FAQ
 
 **Isn't this the same as Chatbot Arena?**
 
 We are big fans of what the LMSYS team have done with Chatbot Arena and fully credit them for the inspiration to develop this. We were looking for a dynamic leaderboard that graded on AI judge capabilities and didn't manage to find one, so we created Judge Arena. This UI is designed especially for evals; to match the format of the model-based eval prompts that you would use in your LLM evaluation / monitoring tool.
 
-**What are the Evaluator Prompt Templates based on?**
-
-As a quick start, we've set up templates that cover the most popular evaluation metrics out there on LLM evaluation / monitoring tools, often known as 'base metrics'. The data samples used in these were randomly picked from popular datasets from academia - [ARC](https://huggingface.co/datasets/allenai/ai2_arc), [Preference Collection](https://huggingface.co/datasets/prometheus-eval/Preference-Collection), [RewardBench](https://huggingface.co/datasets/allenai/reward-bench), [RAGTruth](https://arxiv.org/abs/2401.00396).
-
-These templates are designed as a starting point to showcase how to interact with the Judge Arena, especially for those less familiar with using LLM judges.
-
 **Why should I trust this leaderboard?**
 
-We have listed out our efforts to be fully transparent in the policies above. All of the code for this leaderboard is open-source and can be found on our [Github](https://github.com/atla-ai/judge-arena).
+We have listed out our efforts to be fully transparent in the policies above. All of the code for this leaderboard is open-source and can be found on our [Github](https://github.com/atla-ai/judge-arena). Check out our [blog](https://www.atla-ai.com/blog) to stay up to date as we analyse the results from the leaderboard.
 
 **Who funds this effort?**
 
@@ -145,4 +159,13 @@ Atla currently funds this out of our own pocket. We are looking for API credits 
 We are training a general-purpose evaluator that you will soon be able to run in this Judge Arena. Our next step will be to open-source a powerful model that the community can use to run fast and accurate evaluations.
 <br><br>
 # Get in touch
-Feel free to email us at [support@atla-ai.com](mailto:support@atla-ai.com) or leave feedback on our [Github](https://github.com/atla-ai/judge-arena)!"""
+We’d love to hear your feedback! For general feature requests or to submit / suggest new models to add to the arena, please open up a discussion in the [community](https://huggingface.co/spaces/AtlaAI/judge-arena/discussions) tab. You can also contact us directly on [X](https://x.com/Atla_AI) or [Discord](https://discord.gg/yNpUAMqs).
+\nPlease file any issues on our [Github](https://github.com/atla-ai/judge-arena)."""
+
+
+
+#**What are the Evaluator Prompt Templates based on?**
+
+#As a quick start, we've set up templates that cover the most popular evaluation metrics out there on LLM evaluation / monitoring tools, often known as 'base metrics'. The data samples used in these were randomly picked from popular datasets from academia - [ARC](https://huggingface.co/datasets/allenai/ai2_arc), [Preference Collection](https://huggingface.co/datasets/prometheus-eval/Preference-Collection), [RewardBench](https://huggingface.co/datasets/allenai/reward-bench), [RAGTruth](https://arxiv.org/abs/2401.00396).
+
+#These templates are designed as a starting point to showcase how to interact with the Judge Arena, especially for those less familiar with using LLM judges.

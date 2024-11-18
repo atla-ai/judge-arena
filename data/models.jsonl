@@ -9,8 +9,10 @@
 {"name": "GPT-3.5 Turbo", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-3.5-turbo"}
 {"name": "Claude 3 Haiku", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-haiku-20240307"}
 {"name": "Claude 3 Sonnet", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-sonnet-20240229"}
-{"name": "Claude 3 Opus", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-opus-20240229"}
+{"name": "Claude 3 Opus", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-opus-latest"}
 {"name": "Meta Llama 3.1 8B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"}
 {"name": "Qwen 2.5 72B Instruct Turbo", "organization": "Alibaba", "license": "Open Source", "api_model": "Qwen/Qwen2.5-72B-Instruct-Turbo"}
 {"name": "Qwen 2.5 7B Instruct Turbo", "organization": "Alibaba", "license": "Open Source", "api_model": "Qwen/Qwen2.5-7B-Instruct-Turbo"}
 {"name": "Mistral (7B) Instruct v0.1", "organization": "Mistral AI", "license": "Open Source", "api_model": "mistralai/Mistral-7B-Instruct-v0.1"}
+{"name": "Claude 3.5 Sonnet", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-sonnet-latest"}
+{"name": "Claude 3.5 Haiku", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-haiku-latest"}
