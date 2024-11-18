@@ -47,28 +47,28 @@ EVAL_DESCRIPTION = """
 - Examples (Optional)
 """
 
-DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input based on how well it follows the user's instructions. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of the response. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
+DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input. Your evaluation should focus on the helpfulness of the response given the user's instructions. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
 
 Scoring Rubric:
-Score 1: The response ignores or misinterprets instructions, providing irrelevant or inaccurate content that fails to address the request.
-Score 2: The response follows instructions partially but misses key elements, lacking depth or precision while containing minor inaccuracies.
-Score 3: The response follows main instructions adequately, providing correct and relevant information with reasonable depth.
-Score 4: The response follows instructions thoroughly with strong attention to detail, offering accurate, well-developed content that thoughtfully addresses needs.
-Score 5: The response demonstrates exceptional instruction following with precise, comprehensive content that shows both insight and perfect alignment with the request. 
+Score 1: The response is unhelpful, providing irrelevant or incorrect content that does not address the request.
+Score 2: The response is partially helpful, missing key elements or including minor inaccuracies, and lacks depth in addressing the request.
+Score 3: The response is adequately helpful, correctly addressing the main request with relevant information and some depth.
+Score 4: The response is very helpful, addressing the request thoroughly with accurate and detailed content, but may lack a minor aspect of helpfulness.
+Score 5: The response is exceptionally helpful, providing precise, comprehensive content that fully resolves the request with insight and clarity.
 
 [User Query]: {{input}}
 
 [AI Response]: {{response}}"""
 
 # Split the eval prompt into editable and fixed parts
-DEFAULT_EVAL_PROMPT_EDITABLE = """You are assessing a chat bot response to a user's input based on how well it follows the user's instructions. Your evaluation should consider factors such as the helpfulness, relevance, accuracy, depth, creativity, and level of detail of the response. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
+DEFAULT_EVAL_PROMPT_EDITABLE = """You are assessing a chat bot response to a user's input. Your evaluation should focus on the helpfulness of the response given the user's instructions. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
 
 Scoring Rubric:
-Score 1: The response ignores or misinterprets instructions, providing irrelevant or inaccurate content that fails to address the request.
-Score 2: The response follows instructions partially but misses key elements, lacking depth or precision while containing minor inaccuracies.
-Score 3: The response follows main instructions adequately, providing correct and relevant information with reasonable depth.
-Score 4: The response follows instructions thoroughly with strong attention to detail, offering accurate, well-developed content that thoughtfully addresses needs.
-Score 5: The response demonstrates exceptional instruction following with precise, comprehensive content that shows both insight and perfect alignment with the request."""
+Score 1: The response is unhelpful, providing irrelevant or incorrect content that does not address the request.
+Score 2: The response is partially helpful, missing key elements or including minor inaccuracies, and lacks depth in addressing the request.
+Score 3: The response is adequately helpful, correctly addressing the main request with relevant information and some depth.
+Score 4: The response is very helpful, addressing the request thoroughly with accurate and detailed content, but may lack a minor aspect of helpfulness.
+Score 5: The response is exceptionally helpful, providing precise, comprehensive content that fully resolves the request with insight and clarity."""
 
 # Fixed suffix that will always be appended
 FIXED_EVAL_SUFFIX = """
