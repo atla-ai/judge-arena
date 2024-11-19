@@ -386,7 +386,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             gr.Markdown("<br>")
 
             # Update Evaluator Prompt Accordion
-            with gr.Accordion("📝 Evaluator Prompt", open=False):
+            with gr.Accordion("📝 Judge Prompt", open=False):
                 eval_prompt_editable = gr.TextArea(
                     value=DEFAULT_EVAL_PROMPT_EDITABLE,
                     label="Evaluation Criteria",
