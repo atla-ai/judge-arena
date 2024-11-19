@@ -10,15 +10,14 @@ anthropic_client = anthropic.Anthropic()
 openai_client = OpenAI()
 together_client = Together()
 
-GOOD_SYSTEM_PROMPT = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes. The AI response generated should be longer than a few sentences long."""
-BAD_SYSTEM_PROMPT = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes. The response should contain incorrect information, logical fallacies, or misleading explanations. It should sound plausible but be fundamentally wrong. The AI response generated should be longer than a few sentences long."""
-AMBIGUOUS_SYSTEM_PROMPT = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes. The response should mix correct and incorrect information - it should contain some accurate points but also include nuanced, questionable claims or exaggerations. The AI response generated should be longer than a few sentences long."""
+GOOD_SYSTEM_PROMPT = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes. The AI response generated should be roughly a few sentences long. Format your output as JSON: {"human": "<human message>", "ai": <AI assistant response>}. Ensure the output is valid JSON, without additional formatting or explanations."""
+BAD_SYSTEM_PROMPT = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes. The response should contain incorrect information, logical fallacies, or misleading explanations. It should sound plausible but be fundamentally wrong. The AI response generated should be roughly a few sentences long. Format your output as JSON: {"human": "<human message>", "ai": <AI assistant response>}. Ensure the output is valid JSON, without additional formatting or explanations."""
+AMBIGUOUS_SYSTEM_PROMPT = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes. The response should mix correct and incorrect information - it should contain some accurate points but also include nuanced, questionable claims or exaggerations. The AI response generated should be roughly a few sentences long. Format your output as JSON: {"human": "<human message>", "ai": <AI assistant response>}. Ensure the output is valid JSON, without additional formatting or explanations."""
 
-GENERATION_PROMPT = """Please generate a human message and an AI response in the format of a QA dataset. The AI response generated should be at least a few sentences long.
-
-Format your output as JSON:\n\n{\"human\": \"<human message>\", \"ai\": \"<AI assistant response>\"}"""
+GENERATION_PROMPT = """Please generate a random human message and an AI response in the format of a QA dataset. The human input should not be a one-word answer question like "What is the capital of France?". The AI response generated should be at least a few sentences long."""
 
 RESPONSE_GENERATION_SYSTEM_PROMPT = "You are an assistant that generates random responses to human messages for testing purposes. Generate bad responses (with a mix of correct and incorrect information) 60% of the time and good responses 40% of the time. Do not say which type of response you are generating, just generate the response."
+
 def get_random_human_ai_pair():
     # Select system prompt with specified probabilities
     system_prompt = random.choices(
@@ -34,11 +33,11 @@ def get_random_human_ai_pair():
     }[system_prompt]
     print(f"Generating {prompt_type} response")
     
-    # Randomly choose between GPT-3.5 and Claude
-    model_choice = random.choice([
+    # Randomly choose between GPT-3.5 and Claude with 65%/35% weights
+    model_choice = random.choices([
         ("gpt-3.5-turbo", get_openai_response),
         ("claude-3-5-haiku-latest", get_anthropic_response)
-    ])
+    ], weights=[0.5, 0.5])[0]
     model_name, api_func = model_choice
     
     # Generate response using selected model
@@ -46,19 +45,41 @@ def get_random_human_ai_pair():
         model_name=model_name,
         prompt=GENERATION_PROMPT,
         system_prompt=system_prompt,
-        max_tokens=600,
+        max_tokens=500,
         temperature=1
     )
     
+    # Define default messages outside the try block
+    default_human = "How do muscles grow?"
+    default_ai = """Muscles grow through a process called skeletal muscle hypertrophy, which adds more myosin filaments to each muscle fiber, making the engine of the cell bigger and stronger over time. This is achieved through increased muscle tension and physical stress, breaking down muscle fiber. Muscle growth is also a direct consequence of resistance training and nutrition. People build muscle at different rates depending on their age, sex, and genetics, but muscle development significantly increases if exercise is done correctly and the body stores more protein through a process called protein synthesis."""
+    
     # Parse the response to get the human input and AI response
     try:
-        data = json.loads(response) 
-        human_message = data.get("human", """How do muscles grow?""")
-        ai_message = data.get("ai", """Muscles grow through a process called skeletal muscle hypertrophy, which adds more myosin filaments to each muscle fiber, making the engine of the cell bigger and stronger over time. This is achieved through increased muscle tension and physical stress, breaking down muscle fiber[3]. Muscle growth is also a direct consequence of resistance training and nutrition. People build muscle at different rates depending on their age, sex, and genetics, but muscle development significantly increases if exercise is done correctly and the body stores more protein through a process called protein synthesis.""")
-    except json.JSONDecodeError:
-        # If parsing fails, set default messages
-        human_message = "Hello, how are you?"
-        ai_message = "I'm doing well, thank you!"
+        # First try to parse the entire response as JSON
+        try:
+            # Clean the response by replacing newlines with spaces
+            cleaned_response = response.replace('\n', ' ').replace('\r', '')
+            data = json.loads(cleaned_response)
+        except json.JSONDecodeError:
+            # If that fails, try to find JSON within the response
+            json_match = re.search(r"{.*}", response, re.DOTALL)
+            if json_match:
+                cleaned_match = json_match.group(0).replace('\n', ' ').replace('\r', '')
+                data = json.loads(cleaned_match)
+            else:
+                raise json.JSONDecodeError("No valid JSON found", response, 0)
+        
+        # Extract messages with fallbacks
+        human_message = data.get("human", default_human)
+        ai_message = data.get("ai", default_ai)
+        
+        # Debug logging
+        print(f"Parsed response: human='{human_message}', ai='{ai_message[:50]}...'")
+        
+    except Exception as e:
+        print(f"Failed to parse response: {str(e)}\n {response}")
+        human_message = default_human
+        ai_message = default_ai
     
     return human_message, ai_message
 
