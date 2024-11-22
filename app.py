@@ -386,7 +386,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             gr.Markdown("<br>")
 
             # Update Evaluator Prompt Accordion
-            with gr.Accordion("📝 Judge Prompt", open=False):
+            with gr.Accordion("📝 Edit Judge Prompt", open=False):
                 eval_prompt_editable = gr.TextArea(
                     value=DEFAULT_EVAL_PROMPT_EDITABLE,
                     label="Evaluation Criteria",
@@ -412,6 +412,13 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                 headers=["Model", "ELO", "95% CI", "Matches", "Organization", "License"],
                 datatype=["str", "number", "str", "number", "str", "str", "str"],
             )
+
+            gr.Markdown("""<br>
+                        <br>
+                        Judge Arena uses Together AI for inference of open-source models. FP8 models are named as -- "Turbo" where the performance of the FP16 reference models is closely matched:
+
+                        [*"Together Turbo achieves this performance while maintaining full accuracy compared to Meta's reference implementation across all models. Llama-3.1-405B-Instruct-Turbo matches the accuracy of Meta reference models."*](https://www.together.ai/blog/together-inference-engine-2)
+            """)
 
             # Add change handler for checkbox
             show_preliminary.change(
