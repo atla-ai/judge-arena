@@ -3,88 +3,22 @@ import anthropic
 from together import Together
 import json
 import re
-import random
+import os
+import requests
 
 # Initialize clients
 anthropic_client = anthropic.Anthropic()
 openai_client = OpenAI()
 together_client = Together()
-
-GOOD_SYSTEM_PROMPT = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes. The AI response generated should be roughly a few sentences long. Format your output as JSON: {"human": "<human message>", "ai": <AI assistant response>}. Ensure the output is valid JSON, without additional formatting or explanations."""
-BAD_SYSTEM_PROMPT = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes. The response should contain incorrect information, logical fallacies, or misleading explanations. It should sound plausible but be fundamentally wrong. The AI response generated should be roughly a few sentences long. Format your output as JSON: {"human": "<human message>", "ai": <AI assistant response>}. Ensure the output is valid JSON, without additional formatting or explanations."""
-AMBIGUOUS_SYSTEM_PROMPT = """You are an assistant that generates random conversations between a human and an AI assistant for testing purposes. The response should mix correct and incorrect information - it should contain some accurate points but also include nuanced, questionable claims or exaggerations. The AI response generated should be roughly a few sentences long. Format your output as JSON: {"human": "<human message>", "ai": <AI assistant response>}. Ensure the output is valid JSON, without additional formatting or explanations."""
-
-GENERATION_PROMPT = """Please generate a random human message and an AI response in the format of a QA dataset. The human input should not be a one-word answer question like "What is the capital of France?". The AI response generated should be at least a few sentences long."""
-
-RESPONSE_GENERATION_SYSTEM_PROMPT = "You are an assistant that generates random responses to human messages for testing purposes. Generate bad responses (with a mix of correct and incorrect information) 60% of the time and good responses 40% of the time. Do not say which type of response you are generating, just generate the response."
-
-def get_random_human_ai_pair():
-    # Select system prompt with specified probabilities
-    system_prompt = random.choices(
-        [GOOD_SYSTEM_PROMPT, BAD_SYSTEM_PROMPT, AMBIGUOUS_SYSTEM_PROMPT],
-        weights=[0.2, 0.2, 0.6]  # 20% good, 20% bad, 60% ambiguous
-    )[0]
-    
-    # Log which type of response is being generated
-    prompt_type = {
-        GOOD_SYSTEM_PROMPT: "good",
-        BAD_SYSTEM_PROMPT: "bad", 
-        AMBIGUOUS_SYSTEM_PROMPT: "ambiguous"
-    }[system_prompt]
-    print(f"Generating {prompt_type} response")
-    
-    # Randomly choose between GPT-3.5 and Claude with 65%/35% weights
-    model_choice = random.choices([
-        ("gpt-3.5-turbo", get_openai_response),
-        ("claude-3-5-haiku-latest", get_anthropic_response)
-    ], weights=[0.5, 0.5])[0]
-    model_name, api_func = model_choice
-    
-    # Generate response using selected model
-    response = api_func(
-        model_name=model_name,
-        prompt=GENERATION_PROMPT,
-        system_prompt=system_prompt,
-        max_tokens=500,
-        temperature=1
-    )
-    
-    # Define default messages outside the try block
-    default_human = "How do muscles grow?"
-    default_ai = """Muscles grow through a process called skeletal muscle hypertrophy, which adds more myosin filaments to each muscle fiber, making the engine of the cell bigger and stronger over time. This is achieved through increased muscle tension and physical stress, breaking down muscle fiber. Muscle growth is also a direct consequence of resistance training and nutrition. People build muscle at different rates depending on their age, sex, and genetics, but muscle development significantly increases if exercise is done correctly and the body stores more protein through a process called protein synthesis."""
-    
-    # Parse the response to get the human input and AI response
-    try:
-        # First try to parse the entire response as JSON
-        try:
-            # Clean the response by replacing newlines with spaces
-            cleaned_response = response.replace('\n', ' ').replace('\r', '')
-            data = json.loads(cleaned_response)
-        except json.JSONDecodeError:
-            # If that fails, try to find JSON within the response
-            json_match = re.search(r"{.*}", response, re.DOTALL)
-            if json_match:
-                cleaned_match = json_match.group(0).replace('\n', ' ').replace('\r', '')
-                data = json.loads(cleaned_match)
-            else:
-                raise json.JSONDecodeError("No valid JSON found", response, 0)
-        
-        # Extract messages with fallbacks
-        human_message = data.get("human", default_human)
-        ai_message = data.get("ai", default_ai)
-        
-        # Debug logging
-        print(f"Parsed response: human='{human_message}', ai='{ai_message[:50]}...'")
-        
-    except Exception as e:
-        print(f"Failed to parse response: {str(e)}\n {response}")
-        human_message = default_human
-        ai_message = default_ai
-    
-    return human_message, ai_message
+hf_api_key = os.getenv("HF_API_KEY")
+huggingface_client = OpenAI(
+    base_url="https://otb7jglxy6r37af6.us-east-1.aws.endpoints.huggingface.cloud/v1/",
+    api_key=hf_api_key
+)
 
 JUDGE_SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction. Your output format should strictly adhere to JSON as follows: {"feedback": "<write feedback>", "result": <numerical score>}. Ensure the output is valid JSON, without additional formatting or explanations."""
 
+ALTERNATIVE_JUDGE_SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction."""
 
 def get_openai_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
     """Get response from OpenAI API"""
@@ -102,7 +36,6 @@ def get_openai_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, m
     except Exception as e:
         return f"Error with OpenAI model {model_name}: {str(e)}"
 
-
 def get_anthropic_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
     """Get response from Anthropic API"""
     try:
@@ -116,7 +49,6 @@ def get_anthropic_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT
         return response.content[0].text
     except Exception as e:
         return f"Error with Anthropic model {model_name}: {str(e)}"
-
 
 def get_together_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
     """Get response from Together API"""
@@ -135,8 +67,40 @@ def get_together_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT,
     except Exception as e:
         return f"Error with Together model {model_name}: {str(e)}"
 
+def get_hf_response(model_name, prompt, max_tokens=500):
+    """Get response from Hugging Face model"""
+    try:
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {hf_api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": max_tokens,
+                "return_full_text": False
+            }
+        }
+        
+        response = requests.post(
+            "https://otb7jglxy6r37af6.us-east-1.aws.endpoints.huggingface.cloud",
+            headers=headers,
+            json=payload
+        )
+        return response.json()[0]["generated_text"]
+    except Exception as e:
+        return f"Error with Hugging Face model {model_name}: {str(e)}"
 
-def get_model_response(model_name, model_info, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
+def get_model_response(
+    model_name,
+    model_info,
+    prompt,
+    use_alternative_prompt=False,
+    max_tokens=500,
+    temperature=0
+):
     """Get response from appropriate API based on model organization"""
     if not model_info:
         return "Model not found or unsupported."
@@ -144,17 +108,32 @@ def get_model_response(model_name, model_info, prompt, system_prompt=JUDGE_SYSTE
     api_model = model_info["api_model"]
     organization = model_info["organization"]
 
+    # Select the appropriate system prompt
+    if use_alternative_prompt:
+        system_prompt = ALTERNATIVE_JUDGE_SYSTEM_PROMPT
+    else:
+        system_prompt = JUDGE_SYSTEM_PROMPT
+
     try:
         if organization == "OpenAI":
-            return get_openai_response(api_model, prompt, system_prompt, max_tokens, temperature)
+            return get_openai_response(
+                api_model, prompt, system_prompt, max_tokens, temperature
+            )
         elif organization == "Anthropic":
-            return get_anthropic_response(api_model, prompt, system_prompt, max_tokens, temperature)
+            return get_anthropic_response(
+                api_model, prompt, system_prompt, max_tokens, temperature
+            )
+        elif organization == "Prometheus":
+            return get_hf_response(
+                api_model, prompt, max_tokens
+            )
         else:
             # All other organizations use Together API
-            return get_together_response(api_model, prompt, system_prompt, max_tokens, temperature)
+            return get_together_response(
+                api_model, prompt, system_prompt, max_tokens, temperature
+            )
     except Exception as e:
         return f"Error with {organization} model {model_name}: {str(e)}"
-
 
 def parse_model_response(response):
     try:
@@ -179,27 +158,49 @@ def parse_model_response(response):
         print(f"Failed to parse response: {str(e)}")
         return "Error", f"Failed to parse response: {response}"
     
-def generate_ai_response(human_msg):
-    """Generate AI response using GPT-3.5-turbo"""
-    if not human_msg.strip():
-        return "", False
-        
+def alternative_parse_model_response(output):
     try:
-        response = get_openai_response(
-            "gpt-3.5-turbo", 
-            human_msg,
-            system_prompt=RESPONSE_GENERATION_SYSTEM_PROMPT,
-            max_tokens=1000,
-            temperature=1
-        )
-        # Extract just the response content since we don't need JSON format here
-        if isinstance(response, str):
-            # Clean up any JSON formatting if present
-            try:
-                data = json.loads(response)
-                response = data.get("content", response)
-            except json.JSONDecodeError:
-                pass
-        return response, False  # Return response and button interactive state
+        print(f"Raw model response: {output}")
+
+        # Remove "Feedback:" prefix if present (case insensitive)
+        output = re.sub(r'^feedback:\s*', '', output.strip(), flags=re.IGNORECASE)
+
+        # First, try to match the pattern "... [RESULT] X"
+        pattern = r"(.*?)\s*\[RESULT\]\s*[\(\[]?(\d+)[\)\]]?"
+        match = re.search(pattern, output, re.DOTALL | re.IGNORECASE)
+        if match:
+            feedback = match.group(1).strip()
+            score = int(match.group(2))
+            return str(score), feedback
+
+        # If no match, try to match "... Score: X"
+        pattern = r"(.*?)\s*(?:Score|Result)\s*:\s*[\(\[]?(\d+)[\)\]]?"
+        match = re.search(pattern, output, re.DOTALL | re.IGNORECASE)
+        if match:
+            feedback = match.group(1).strip()
+            score = int(match.group(2))
+            return str(score), feedback
+
+        # Pattern to handle [Score X] at the end
+        pattern = r"(.*?)\s*\[(?:Score|Result)\s*[\(\[]?(\d+)[\)\]]?\]$"
+        match = re.search(pattern, output, re.DOTALL)
+        if match:
+            feedback = match.group(1).strip()
+            score = int(match.group(2))
+            return str(score), feedback
+
+        # Final fallback attempt
+        pattern = r"[\(\[]?(\d+)[\)\]]?\s*\]?$"
+        match = re.search(pattern, output)
+        if match:
+            score = int(match.group(1))
+            feedback = output[:match.start()].rstrip()
+            # Remove any trailing brackets from feedback
+            feedback = re.sub(r'\s*\[[^\]]*$', '', feedback).strip()
+            return str(score), feedback
+
+        return "Error", f"Failed to parse response: {output}"
+
     except Exception as e:
-        return f"Error generating response: {str(e)}", False
+        print(f"Failed to parse response: {str(e)}")
+        return "Error", f"Exception during parsing: {str(e)}"

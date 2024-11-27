@@ -14,3 +14,5 @@ venv.bak/
 
 voting_data.json
 .vscode
+db.py
+leaderboard.py

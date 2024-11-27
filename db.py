@@ -25,9 +25,8 @@ def add_vote(vote: Vote, db: Database) -> None:
 
 
 def get_votes(db: Database) -> List[Vote]:
-    now = datetime.now(timezone.utc)
-    current_hour = now.replace(minute=0, second=0, microsecond=0)
-    votes = list(
-        db.get_collection("votes").find({"timestamp": {"$lte": current_hour.isoformat()}})
-    )
+    votes = list(db.get_collection("votes").find())
     return votes
+
+#   current_hour = now.replace(minute=0, second=0, microsecond=0)
+    #   db.get_collection("votes").find({"timestamp": {"$lte": current_hour.isoformat()}})
