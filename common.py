@@ -163,6 +163,18 @@ We’d love to hear your feedback! For general feature requests or to submit / s
 \nPlease file any issues on our [Github](https://github.com/atla-ai/judge-arena)."""
 
 
+# Default values for compatible mode
+DEFAULT_EVAL_CRITERIA = """Evaluate the helpfulness of the chatbot response given the user's instructions. Focus on relevance, accuracy, and completeness while being objective. Do not consider response length in your evaluation."""
+
+DEFAULT_SCORE_1 = "The response is unhelpful, providing irrelevant or incorrect content that does not address the request."
+
+DEFAULT_SCORE_2 = "The response is partially helpful, missing key elements or including minor inaccuracies, and lacks depth in addressing the request."
+
+DEFAULT_SCORE_3 = "The response is adequately helpful, correctly addressing the main request with relevant information and some depth."
+
+DEFAULT_SCORE_4 = "The response is very helpful, addressing the request thoroughly with accurate and detailed content, but may lack a minor aspect of helpfulness."
+
+DEFAULT_SCORE_5 = "The response is exceptionally helpful, providing precise, comprehensive content that fully resolves the request with insight and clarity."
 
 #**What are the Evaluator Prompt Templates based on?**
 
