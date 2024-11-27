@@ -13,10 +13,15 @@ load_dotenv()
 import gradio as gr
 from gen_api_answer import (
     get_model_response, 
-    parse_model_response, 
-    get_random_human_ai_pair,
-    generate_ai_response
+    parse_model_response,
+    alternative_parse_model_response
 )
+
+from random_sample_generation import (
+    get_random_human_ai_pair,
+    get_random_human_ai_ground_truth_pair,
+    generate_ai_response
+)   
 from db import add_vote, create_db_connection, get_votes
 from utils import Vote
 from common import (
@@ -33,6 +38,12 @@ from common import (
     VOTING_HEADER,
     DEFAULT_EVAL_PROMPT_EDITABLE,
     FIXED_EVAL_SUFFIX,
+    DEFAULT_EVAL_CRITERIA,
+    DEFAULT_SCORE_1,
+    DEFAULT_SCORE_2,
+    DEFAULT_SCORE_3,
+    DEFAULT_SCORE_4,
+    DEFAULT_SCORE_5,
 )
 from leaderboard import (
     get_leaderboard,
@@ -292,9 +303,16 @@ leaderboard_table = gr.Dataframe(
 )
 
 
-def populate_random_example(request: gr.Request):
+def populate_random_example(request: gr.Request, compatible_mode: bool):
     """Generate a random human-AI conversation example and reset judge outputs."""
-    human_msg, ai_msg = get_random_human_ai_pair()
+    if compatible_mode:
+        # Generate all three components when compatible mode is enabled
+        human_msg, ai_msg, ground_truth_msg = get_random_human_ai_ground_truth_pair()
+    else:
+        # Generate only human and AI messages when compatible mode is disabled
+        human_msg, ai_msg = get_random_human_ai_pair()
+        ground_truth_msg = ""
+    
     return [
         gr.update(value=human_msg),
         gr.update(value=ai_msg),
@@ -308,6 +326,7 @@ def populate_random_example(request: gr.Request):
         gr.update(interactive=False, variant="primary"),  # Reset vote tie
         gr.update(value="*Model: Hidden*"),  # Reset model name A
         gr.update(value="*Model: Hidden*"),  # Reset model name B
+        gr.update(value=ground_truth_msg, visible=compatible_mode),  # Set ground truth and visibility
     ]
 
 
@@ -343,6 +362,14 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                             label="🤖 AI Response", 
                             lines=15,
                             placeholder="Enter the AI response here..."
+                        )
+                        
+                        # Ground truth response (initially hidden)
+                        ground_truth = gr.TextArea(
+                            label="🎯 Ground truth response",
+                            lines=12,
+                            placeholder="Enter the ground truth response here...",
+                            visible=False
                         )
                         
                     with gr.Row():
@@ -381,22 +408,86 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                                 vote_b = gr.Button("Vote B", variant="primary", interactive=False)
                             with gr.Column(scale=9, min_width=400):  # Wider width for critique
                                 critique_b = gr.TextArea(label="Critique", lines=8, interactive=False)
-                    # Place Vote B button directly under Judge B
+                        # Place Vote B button directly under Judge B
                 
             gr.Markdown("<br>")
+            
 
-            # Update Evaluator Prompt Accordion
-            with gr.Accordion("📝 Edit Judge Prompt", open=False):
-                eval_prompt_editable = gr.TextArea(
-                    value=DEFAULT_EVAL_PROMPT_EDITABLE,
-                    label="Evaluation Criteria",
-                    lines=12
+            # Replace the "Edit Judge Prompt" Accordion section with:
+            with gr.Accordion("📝 Edit Judge Prompt", open=False) as prompt_accordion:
+                gr.Markdown("<br>")
+                compatible_mode_toggle = gr.Checkbox(
+                    label="Use a prompt compatible with Prometheus models",
+                    value=False
                 )
-                with gr.Row(visible=False) as edit_buttons_row:  # Make buttons row initially hidden
-                    cancel_prompt_btn = gr.Button("Cancel")
-                    save_prompt_btn = gr.Button("Save", variant="primary")
-                gr.Markdown("*The sample being evaluated is always appended as:*")
-                gr.Markdown(f"```{FIXED_EVAL_SUFFIX}")
+                
+                # Default prompt editor
+                with gr.Column(visible=True) as default_prompt_editor:
+                    eval_prompt_editable = gr.TextArea(
+                        value=DEFAULT_EVAL_PROMPT_EDITABLE,
+                        label="Evaluation Criteria",
+                        lines=12
+                    )
+
+                    with gr.Row(visible=False) as edit_buttons_row:
+                        cancel_prompt_btn = gr.Button("Cancel")
+                        save_prompt_btn = gr.Button("Save", variant="primary")
+                    gr.Markdown("*The sample being evaluated is always appended as:*")
+                    gr.Markdown(f"```{FIXED_EVAL_SUFFIX}")
+                
+                # Compatible mode editor
+                with gr.Column(visible=False) as compatible_prompt_editor:
+                    with gr.Row():
+                        # Left column - Evaluation Criteria
+                        with gr.Column(scale=1):
+                            eval_criteria_text = gr.TextArea(
+                                label="Evaluation Criteria",
+                                lines=12,
+                                value=DEFAULT_EVAL_CRITERIA,
+                                placeholder="Enter the evaluation criteria..."
+                            )
+                            prometheus_reference = gr.Markdown(
+                                "<br> *This enforces the Prometheus absolute grading prompt template - see [here](https://huggingface.co/prometheus-eval/prometheus-7b-v2.0).*",
+                                visible=False  # Initially hidden
+                            )
+                        
+                        # Right column - Score Descriptions
+                        with gr.Column(scale=1):
+                            score1_description = gr.TextArea(
+                                label="Score 1",
+                                value=DEFAULT_SCORE_1,
+                                placeholder="Description for score 1",
+                                lines=2
+                            )
+                            score2_description = gr.TextArea(
+                                label="Score 2", 
+                                value=DEFAULT_SCORE_2,
+                                placeholder="Description for score 2",
+                                lines=2
+                            )
+                            score3_description = gr.TextArea(
+                                label="Score 3",
+                                value=DEFAULT_SCORE_3,
+                                placeholder="Description for score 3",
+                                lines=2
+                            )
+                            score4_description = gr.TextArea(
+                                label="Score 4",
+                                value=DEFAULT_SCORE_4,
+                                placeholder="Description for score 4",
+                                lines=2
+                            )
+                            score5_description = gr.TextArea(
+                                label="Score 5",
+                                value=DEFAULT_SCORE_5,
+                                placeholder="Description for score 5",
+                                lines=2
+                            )
+
+                    # Add save/cancel buttons for compatible mode
+                    with gr.Row(visible=False) as compatible_edit_buttons_row:
+                        compatible_cancel_btn = gr.Button("Cancel")
+                        compatible_save_btn = gr.Button("Save", variant="primary")
 
         with gr.TabItem("Leaderboard"):
             with gr.Row():
@@ -404,7 +495,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                     show_preliminary = gr.Checkbox(
                         label="Reveal preliminary results",
                         value=True,  # Checked by default
-                        info="Show all models, including models with less few human ratings (< 500 votes)",
+                        info="Show all models, including models with less human ratings (< 500 votes)",
                         interactive=True
                     )
             stats_display = gr.Markdown()
@@ -412,7 +503,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                 headers=["Model", "ELO", "95% CI", "Matches", "Organization", "License"],
                 datatype=["str", "number", "str", "number", "str", "str", "str"],
             )
-
+            
             gr.Markdown("""<br>
                         <br>
                         Judge Arena uses Together AI for inference of open-source models. FP8 models are named as -- "Turbo" where the performance of the FP16 reference models is closely matched:
@@ -444,62 +535,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
     final_prompt_state = gr.State()
     eval_prompt_previous = gr.State(value=DEFAULT_EVAL_PROMPT_EDITABLE)  # Initialize with default value
     is_editing = gr.State(False)  # Track editing state
-
-    # Update variable inputs based on the eval prompt
-    #def update_variables(eval_prompt):
-    #    variables = parse_variables(eval_prompt)
-    #    updates = []
-
-    #    for i in range(len(variable_rows)):
-    #        var_row, var_input = variable_rows[i]
-    #        if i < len(variables):
-    #            var_name = variables[i]
-    #            # Set the number of lines based on the variable name
-    #            if var_name == "response":
-    #                lines = 4  # Adjust this number as needed
-    #            else:
-    #                lines = 1  # Default to single line for other variables
-    #            updates.extend(
-    #                [
-    #                    gr.update(visible=True),  # Show the variable row
-    #                    gr.update(
-    #                        label=var_name, visible=True, lines=lines
-    #                    ),  # Update label and lines
-    #                ]
-    #            )
-    #        else:
-    #            updates.extend(
-    #                [
-    #                        gr.update(visible=False),  # Hide the variable row
-    #                        gr.update(value="", visible=False),  # Clear value when hidden
-    #                    ]
-    #            )
-    #    return updates
-
-    #eval_prompt.change(
-    #    fn=update_variables,
-    #    inputs=eval_prompt,
-    #    outputs=[item for sublist in variable_rows for item in sublist],
-    #)
-
-    # Regenerate button functionality
-    #regenerate_button.click(
-    #    fn=regenerate_prompt,
-    #    inputs=[model_a_state, model_b_state, eval_prompt, human_input, ai_response],
-    #    outputs=[
-    #        score_a,
-    #        critique_a,
-    #        score_b,
-    #        critique_b,
-    #        vote_a,
-    #        vote_b,
-    #        tie_button_row,
-    #        model_name_a,
-    #        model_name_b,
-    #        model_a_state,
-    #        model_b_state,
-    #    ],
-    #)
+    compatible_mode_state = gr.State(False)  # Track compatible mode state
 
     # Update model names after responses are generated
     def update_model_names(model_a, model_b):
@@ -621,39 +657,128 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         outputs=edit_buttons_row
     )
 
-    # Update the submit function to combine editable and fixed parts
-    def submit_and_store(editable_prompt, *variables):
-        # Combine the editable prompt with fixed suffix
-        full_prompt = editable_prompt + FIXED_EVAL_SUFFIX
-        
-        # Get the responses using the full prompt
-        (
-            response_a,
-            response_b,
-            buttons_visible,
-            regen_visible,
-            model_a,
-            model_b,
-            final_prompt,
-        ) = submit_prompt(full_prompt, *variables)
+    # Function to toggle visibility based on compatible mode
+    def toggle_compatible_mode(checked):
+        return {
+            ground_truth: gr.update(visible=checked),
+            default_prompt_editor: gr.update(visible=not checked),
+            compatible_prompt_editor: gr.update(visible=checked),
+            prometheus_reference: gr.update(visible=checked),
+        }
 
-        # Parse the responses
-        score_a, critique_a = parse_model_response(response_a)
-        score_b, critique_b = parse_model_response(response_b)
+    compatible_mode_toggle.change(
+        fn=toggle_compatible_mode,
+        inputs=[compatible_mode_toggle],
+        outputs=[
+            ground_truth,
+            default_prompt_editor,
+            compatible_prompt_editor,
+            prometheus_reference,
+        ]
+    )
+
+    # Update the submit function to handle compatible mode
+    def submit_and_store(
+        compatible_mode,
+        editable_prompt,
+        human_input,
+        ai_response,
+        ground_truth_input,
+        eval_criteria_text_input,
+        score1_desc,
+        score2_desc,
+        score3_desc,
+        score4_desc,
+        score5_desc,
+    ):
+        if compatible_mode:
+            # Build the prompt using the new format
+            prompt = f"""###Task Description:
+An instruction (might include an Input inside it), a response to evaluate, a reference answer that gets a score of 5, and a score rubric representing an evaluation criteria are given.
+1. Write a detailed feedback that assesses the quality of the response strictly based on the given score rubric, not evaluating in general.
+2. After writing the feedback, write a score that is an integer between 1 and 5. You should refer to the score rubric.
+3. The output format should look as follows: "Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)"
+4. Please do not generate any other openings, closings, or explanations.
+
+###The instruction to evaluate:
+{human_input}
+
+###Response to evaluate:
+{ai_response}
+
+###Reference Answer (Score 5):
+{ground_truth_input}
+
+###Score Rubrics:
+[{eval_criteria_text_input}]
+Score 1: {score1_desc}
+Score 2: {score2_desc}
+Score 3: {score3_desc}
+Score 4: {score4_desc}
+Score 5: {score5_desc}
+
+###Feedback:
+"""
+            final_prompt = prompt
+            use_alternative_prompt = True
+        else:
+            # Combine the editable prompt with fixed suffix
+            full_prompt = editable_prompt + FIXED_EVAL_SUFFIX
+            # Replace variables in the eval prompt
+            variable_values = {'input': human_input, 'response': ai_response}
+            final_prompt = get_final_prompt(full_prompt, variable_values)
+            use_alternative_prompt = False
+
+        # Filter models based on compatible mode
+        if compatible_mode:
+            # Include all models when compatible mode is enabled
+            models = list(model_data.keys())
+        else:
+            # Exclude Prometheus models when not in compatible mode
+            models = [
+                model_name for model_name in model_data.keys()
+                if model_data[model_name]["organization"] != "Prometheus"
+            ]
+
+        # Select two models randomly from the filtered list
+        model1, model2 = random.sample(models, 2)
+        model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
+
+        # Get responses from models
+        response_a = get_model_response(
+            model_a,
+            model_data.get(model_a),
+            final_prompt,
+            use_alternative_prompt=use_alternative_prompt
+        )
+        response_b = get_model_response(
+            model_b,
+            model_data.get(model_b),
+            final_prompt,
+            use_alternative_prompt=use_alternative_prompt
+        )
+
+        # Parse the responses based on mode
+        if compatible_mode:
+            score_a_val, critique_a_val = alternative_parse_model_response(response_a)
+            score_b_val, critique_b_val = alternative_parse_model_response(response_b)
+        else:
+            score_a_val, critique_a_val = parse_model_response(response_a)
+            score_b_val, critique_b_val = parse_model_response(response_b)
 
         # Only append "/ 5" if using the default prompt
-        if editable_prompt.strip() == DEFAULT_EVAL_PROMPT_EDITABLE.strip():
-            score_a = f"{score_a} / 5"
-            score_b = f"{score_b} / 5"
+        if not compatible_mode and editable_prompt.strip() == DEFAULT_EVAL_PROMPT_EDITABLE.strip():
+            score_a_val = f"{score_a_val} / 5"
+            score_b_val = f"{score_b_val} / 5"
 
-        # Update the last_submission state with the current values
-        last_submission.value = {"prompt": full_prompt, "variables": variables}
+        # Update the last_submission state
+        last_submission.value = {"prompt": final_prompt, "variables": [human_input, ai_response]}
 
         return (
-            score_a,
-            critique_a,
-            score_b,
-            critique_b,
+            score_a_val,
+            critique_a_val,
+            score_b_val,
+            critique_b_val,
             gr.update(interactive=True, variant="primary"),  # vote_a
             gr.update(interactive=True, variant="primary"),  # vote_b
             gr.update(interactive=True, variant="primary"),  # vote_tie
@@ -662,18 +787,26 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             final_prompt,
             gr.update(value="*Model: Hidden*"),
             gr.update(value="*Model: Hidden*"),
-            gr.update(
-                value="Regenerate judges",
-                variant="secondary",
-                interactive=True
-            ),
+            gr.update(value="Regenerate judges", variant="secondary", interactive=True),
             gr.update(value="🎲"),  # random_btn
         )
 
     # Update the click handler to use the editable prompt
     send_btn.click(
         fn=submit_and_store,
-        inputs=[eval_prompt_editable, human_input, ai_response],
+        inputs=[
+            compatible_mode_toggle,
+            eval_prompt_editable,
+            human_input,
+            ai_response,
+            ground_truth,
+            eval_criteria_text,
+            score1_description,
+            score2_description,
+            score3_description,
+            score4_description,
+            score5_description,
+        ],
         outputs=[
             score_a,
             critique_a,
@@ -692,64 +825,10 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         ],
     )
 
-    # Update the input change handlers to also disable regenerate button
-    # def handle_input_changes(prompt, *variables):
-    #    """Enable send button and manage regenerate button based on input changes"""
-    #    last_inputs = last_submission.value
-    #    current_inputs = {"prompt": prompt, "variables": variables}
-    #    inputs_changed = last_inputs != current_inputs
-    #    return [
-    #        gr.update(interactive=True),  # send button always enabled
-    #        gr.update(
-    #            interactive=not inputs_changed
-    #        ),  # regenerate button disabled if inputs changed
-    #    ]
-
-    # Update the change handlers for prompt and variables
-    #eval_prompt.change(
-    #    fn=handle_input_changes,
-    #    inputs=[eval_prompt] + [var_input for _, var_input in variable_rows],
-    #    outputs=[send_btn, regenerate_button],
-    #)
-
-    # for _, var_input in variable_rows:
-    #    var_input.change(
-    #        fn=handle_input_changes,
-    #        inputs=[eval_prompt] + [var_input for _, var_input in variable_rows],
-    #        outputs=[send_btn, regenerate_button],
-    #    )
-
-    # Add click handlers for metric buttons
-    #outputs_list = [eval_prompt] + [var_input for _, var_input in variable_rows]
-
-    #custom_btn.click(fn=lambda: set_example_metric("Custom"), outputs=outputs_list)
-
-    #hallucination_btn.click(
-    #    fn=lambda: set_example_metric("Hallucination"), outputs=outputs_list
-    #)
-
-    #precision_btn.click(fn=lambda: set_example_metric("Precision"), outputs=outputs_list)
-
-    #recall_btn.click(fn=lambda: set_example_metric("Recall"), outputs=outputs_list)
-
-    #coherence_btn.click(
-    #    fn=lambda: set_example_metric("Logical_Coherence"), outputs=outputs_list
-    #)
-
-    #faithfulness_btn.click(
-    #    fn=lambda: set_example_metric("Faithfulness"), outputs=outputs_list
-    #)
-
-    # Set default metric at startup
-    demo.load(
-        #fn=lambda: set_example_metric("Hallucination"),
-        #outputs=[eval_prompt] + [var_input for _, var_input in variable_rows],
-    )
-
     # Add random button handler
     random_btn.click(
         fn=populate_random_example,
-        inputs=[],
+        inputs=[compatible_mode_toggle],  # Use compatible mode toggle to decide behavior
         outputs=[
             human_input, 
             ai_response,
@@ -763,6 +842,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             vote_tie,
             model_name_a,
             model_name_b,
+            ground_truth,  # Set ground truth
         ]
     )
 
@@ -810,10 +890,149 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
     # Update the demo.load to include the random example population
     demo.load(
-        fn=populate_random_example,
+        fn=lambda: populate_random_example(None, False),  # Pass False for initial compatible_mode
         inputs=[],
-        outputs=[human_input, ai_response]
+        outputs=[
+            human_input,
+            ai_response,
+            random_btn,
+            score_a,
+            critique_a,
+            score_b,
+            critique_b,
+            vote_a,
+            vote_b,
+            vote_tie,
+            model_name_a,
+            model_name_b,
+            ground_truth,
+        ]
     )
+
+    # Add new state variables for compatible mode
+    eval_criteria_previous = gr.State(value=DEFAULT_EVAL_CRITERIA)
+    score1_previous = gr.State(value=DEFAULT_SCORE_1)
+    score2_previous = gr.State(value=DEFAULT_SCORE_2)
+    score3_previous = gr.State(value=DEFAULT_SCORE_3)
+    score4_previous = gr.State(value=DEFAULT_SCORE_4)
+    score5_previous = gr.State(value=DEFAULT_SCORE_5)
+
+    # Add new functions to handle compatible mode saves/cancels
+    def save_compatible_prompt(criteria, score1, score2, score3, score4, score5):
+        return [
+            gr.update(value=criteria),  # Update criteria
+            criteria,  # Update previous criteria state
+            gr.update(value=score1),
+            score1,
+            gr.update(value=score2),
+            score2,
+            gr.update(value=score3),
+            score3,
+            gr.update(value=score4),
+            score4,
+            gr.update(value=score5),
+            score5,
+            gr.update(visible=False)  # Hide buttons
+        ]
+
+    def cancel_compatible_prompt(prev_criteria, prev_score1, prev_score2, prev_score3, prev_score4, prev_score5):
+        return [
+            gr.update(value=prev_criteria),
+            prev_criteria,
+            gr.update(value=prev_score1),
+            prev_score1,
+            gr.update(value=prev_score2),
+            prev_score2,
+            gr.update(value=prev_score3),
+            prev_score3,
+            gr.update(value=prev_score4),
+            prev_score4,
+            gr.update(value=prev_score5),
+            prev_score5,
+            gr.update(visible=False)
+        ]
+
+    def show_compatible_edit_buttons(*current_values):
+        previous_values = current_values[1::2]  # Get previous values
+        current_values = current_values[::2]    # Get current values
+        return gr.update(visible=any(curr != prev for curr, prev in zip(current_values, previous_values)))
+
+    # Add click handlers for compatible mode buttons
+    compatible_save_btn.click(
+        fn=save_compatible_prompt,
+        inputs=[
+            eval_criteria_text,
+            score1_description,
+            score2_description,
+            score3_description,
+            score4_description,
+            score5_description
+        ],
+        outputs=[
+            eval_criteria_text,
+            eval_criteria_previous,
+            score1_description,
+            score1_previous,
+            score2_description,
+            score2_previous,
+            score3_description,
+            score3_previous,
+            score4_description,
+            score4_previous,
+            score5_description,
+            score5_previous,
+            compatible_edit_buttons_row
+        ]
+    )
+
+    compatible_cancel_btn.click(
+        fn=cancel_compatible_prompt,
+        inputs=[
+            eval_criteria_previous,
+            score1_previous,
+            score2_previous,
+            score3_previous,
+            score4_previous,
+            score5_previous
+        ],
+        outputs=[
+            eval_criteria_text,
+            eval_criteria_previous,
+            score1_description,
+            score1_previous,
+            score2_description,
+            score2_previous,
+            score3_description,
+            score3_previous,
+            score4_description,
+            score4_previous,
+            score5_description,
+            score5_previous,
+            compatible_edit_buttons_row
+        ]
+    )
+
+    # Add change handlers for all compatible mode inputs
+    for component in [eval_criteria_text, score1_description, score2_description, 
+                     score3_description, score4_description, score5_description]:
+        component.change(
+            fn=show_compatible_edit_buttons,
+            inputs=[
+                eval_criteria_text,
+                eval_criteria_previous,
+                score1_description,
+                score1_previous,
+                score2_description,
+                score2_previous,
+                score3_description,
+                score3_previous,
+                score4_description,
+                score4_previous,
+                score5_description,
+                score5_previous
+            ],
+            outputs=compatible_edit_buttons_row
+        )
 
 if __name__ == "__main__":
     demo.launch()
