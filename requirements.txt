@@ -4,3 +4,4 @@ python-dotenv
 openai
 anthropic
 together
+cohere

@@ -1,6 +1,7 @@
 from openai import OpenAI
 import anthropic
 from together import Together
+import cohere
 import json
 import re
 import os
@@ -11,6 +12,7 @@ anthropic_client = anthropic.Anthropic()
 openai_client = OpenAI()
 together_client = Together()
 hf_api_key = os.getenv("HF_API_KEY")
+cohere_client = cohere.ClientV2(os.getenv("CO_API_KEY"))
 huggingface_client = OpenAI(
     base_url="https://otb7jglxy6r37af6.us-east-1.aws.endpoints.huggingface.cloud/v1/",
     api_key=hf_api_key
@@ -93,6 +95,27 @@ def get_hf_response(model_name, prompt, max_tokens=500):
     except Exception as e:
         return f"Error with Hugging Face model {model_name}: {str(e)}"
 
+def get_cohere_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
+    """Get response from Cohere API"""
+    try:
+        response = cohere_client.chat(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature
+        )
+        # Extract the text from the content items
+        content_items = response.message.content
+        if isinstance(content_items, list):
+            # Get the text from the first content item
+            return content_items[0].text
+        return str(content_items)  # Fallback if it's not a list
+    except Exception as e:
+        return f"Error with Cohere model {model_name}: {str(e)}"
+
 def get_model_response(
     model_name,
     model_info,
@@ -126,6 +149,10 @@ def get_model_response(
         elif organization == "Prometheus":
             return get_hf_response(
                 api_model, prompt, max_tokens
+            )
+        elif organization == "Cohere":
+            return get_cohere_response(
+                api_model, prompt, system_prompt, max_tokens, temperature
             )
         else:
             # All other organizations use Together API
@@ -161,11 +188,20 @@ def parse_model_response(response):
 def alternative_parse_model_response(output):
     try:
         print(f"Raw model response: {output}")
+        output = output.strip()
 
         # Remove "Feedback:" prefix if present (case insensitive)
-        output = re.sub(r'^feedback:\s*', '', output.strip(), flags=re.IGNORECASE)
+        output = re.sub(r'^feedback:\s*', '', output, flags=re.IGNORECASE)
+        
+        # New pattern to match [RESULT] X at the beginning
+        begin_result_pattern = r'^\[RESULT\]\s*(\d+)\s*\n*(.*?)$'
+        begin_match = re.search(begin_result_pattern, output, re.DOTALL | re.IGNORECASE)
+        if begin_match:
+            score = int(begin_match.group(1))
+            feedback = begin_match.group(2).strip()
+            return str(score), feedback
 
-        # First, try to match the pattern "... [RESULT] X"
+        # Existing patterns for end-of-string results...
         pattern = r"(.*?)\s*\[RESULT\]\s*[\(\[]?(\d+)[\)\]]?"
         match = re.search(pattern, output, re.DOTALL | re.IGNORECASE)
         if match:

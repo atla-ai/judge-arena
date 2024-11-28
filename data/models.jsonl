@@ -17,3 +17,5 @@
 {"name": "Claude 3.5 Sonnet", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-sonnet-latest"}
 {"name": "Claude 3.5 Haiku", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-haiku-latest"}
 {"name": "Prometheus-7b v2", "organization": "Prometheus", "license": "Open Source", "api_model": "prometheus/prometheus-7b-v2"}
+{"name": "Command-R", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r"}
+{"name": "Command-R Plus", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r-plus"}

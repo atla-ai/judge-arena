@@ -1,0 +1,140 @@
+from gen_api_answer import alternative_parse_model_response
+
+test_cases = [
+    # Case 1: [RESULT] at beginning
+    {
+        "name": "Result at beginning",
+        "input": """[RESULT] 4
+
+The response adheres to the traditional 5-7-5 syllable structure of a haiku and effectively captures the imagery.""",
+        "expected": ("4", "The response adheres to the traditional 5-7-5 syllable structure of a haiku and effectively captures the imagery.")
+    },
+    
+    # Case 2: [RESULT] at end
+    {
+        "name": "Result at end",
+        "input": """The response shows excellent understanding of the concept and provides clear examples.
+[RESULT] 5""",
+        "expected": ("5", "The response shows excellent understanding of the concept and provides clear examples.")
+    },
+    
+    # Case 3: Score: format
+    {
+        "name": "Score: format",
+        "input": """The answer is incomplete and lacks detail.
+Score: 2""",
+        "expected": ("2", "The answer is incomplete and lacks detail.")
+    },
+    
+    # Case 4: [Score X] format
+    {
+        "name": "Score in brackets",
+        "input": """Good attempt but room for improvement. [Score 3]""",
+        "expected": ("3", "Good attempt but room for improvement.")
+    },
+    
+    # Case 5: Feedback: prefix
+    {
+        "name": "Feedback prefix",
+        "input": """Feedback: The response is well-structured and comprehensive.
+[RESULT] 4""",
+        "expected": ("4", "The response is well-structured and comprehensive.")
+    },
+    
+    # Case 6: Multiple newlines
+    {
+        "name": "Multiple newlines",
+        "input": """[RESULT] 5
+
+
+Excellent work with detailed explanations and proper citations.""",
+        "expected": ("5", "Excellent work with detailed explanations and proper citations.")
+    },
+    
+    # Case 7: Result with parentheses
+    {
+        "name": "Result with parentheses",
+        "input": """Clear and concise explanation.
+[RESULT] (3)""",
+        "expected": ("3", "Clear and concise explanation.")
+    },
+    
+    # Case 8: Complex formatting
+    {
+        "name": "Complex formatting",
+        "input": """Feedback: 
+The response demonstrates:
+- Good understanding
+- Clear structure
+- Proper examples
+
+[RESULT] 4""",
+        "expected": ("4", """The response demonstrates:
+- Good understanding
+- Clear structure
+- Proper examples""")
+    },
+    
+    # Case 9: Lowercase result
+    {
+        "name": "Lowercase result",
+        "input": """Good explanation but missing key points.
+[result] 3""",
+        "expected": ("3", "Good explanation but missing key points.")
+    },
+    
+    # Case 10: Just number at end
+    {
+        "name": "Just number",
+        "input": """Adequate response with basic coverage of the topic. 3""",
+        "expected": ("3", "Adequate response with basic coverage of the topic.")
+    },
+    
+    # Case 11: Invalid format
+    {
+        "name": "Invalid format",
+        "input": """Just some text without any score""",
+        "expected": ("Error", "Failed to parse response: Just some text without any score")
+    },
+    
+    # Case 12: Empty input
+    {
+        "name": "Empty input",
+        "input": "",
+        "expected": ("Error", "Failed to parse response: ")
+    }
+]
+
+def run_tests():
+    passed = 0
+    failed = 0
+    
+    for i, test in enumerate(test_cases, 1):
+        print(f"\nTest {i}: {test['name']}")
+        print("-" * 50)
+        print(f"Input:\n{test['input']}")
+        
+        result = alternative_parse_model_response(test['input'])
+        expected = test['expected']
+        
+        print(f"\nExpected output: {expected}")
+        print(f"Actual output:   {result}")
+        
+        if result == expected:
+            print("\n✅ PASSED")
+            passed += 1
+        else:
+            print("\n❌ FAILED")
+            print(f"Expected: {expected}")
+            print(f"Got:      {result}")
+            failed += 1
+            
+    print("\n" + "=" * 50)
+    print(f"Test Summary:")
+    print(f"Passed: {passed}")
+    print(f"Failed: {failed}")
+    print(f"Total:  {len(test_cases)}")
+    print("=" * 50)
+
+if __name__ == "__main__":
+    run_tests()
