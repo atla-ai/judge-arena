@@ -47,28 +47,28 @@ EVAL_DESCRIPTION = """
 - Examples (Optional)
 """
 
-DEFAULT_EVAL_PROMPT = """You are assessing a chat bot response to a user's input. Your evaluation should focus on the helpfulness of the response given the user's instructions. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
+DEFAULT_EVAL_PROMPT = """Does the model provide relevant and useful responses to the user's needs or questions?
 
 Scoring Rubric:
-Score 1: The response is unhelpful, providing irrelevant or incorrect content that does not address the request.
-Score 2: The response is partially helpful, missing key elements or including minor inaccuracies, and lacks depth in addressing the request.
-Score 3: The response is adequately helpful, correctly addressing the main request with relevant information and some depth.
-Score 4: The response is very helpful, addressing the request thoroughly with accurate and detailed content, but may lack a minor aspect of helpfulness.
-Score 5: The response is exceptionally helpful, providing precise, comprehensive content that fully resolves the request with insight and clarity.
+Score 1: The model's responses are irrelevant or unhelpful to the user's needs or queries.
+Score 2: The model sometimes provides helpful information, but often fails to address the user's actual needs or questions.
+Score 3: The model generally provides helpful responses that address the user's needs, though it may occasionally miss the mark.
+Score 4: The model regularly provides helpful responses that are well-aligned with the user's inquiries, with only rare inaccuracies.
+Score 5: The model consistently offers highly relevant and useful responses that perfectly cater to the user's needs and inquiries.
 
 [User Query]: {{input}}
 
 [AI Response]: {{response}}"""
 
 # Split the eval prompt into editable and fixed parts
-DEFAULT_EVAL_PROMPT_EDITABLE = """You are assessing a chat bot response to a user's input. Your evaluation should focus on the helpfulness of the response given the user's instructions. Do not allow the length of the response to influence your evaluation. Be objective as possible and give a brief explanation for your score.
+DEFAULT_EVAL_PROMPT_EDITABLE = """Does the model provide relevant and useful responses to the user's needs or questions?
 
 Scoring Rubric:
-Score 1: The response is unhelpful, providing irrelevant or incorrect content that does not address the request.
-Score 2: The response is partially helpful, missing key elements or including minor inaccuracies, and lacks depth in addressing the request.
-Score 3: The response is adequately helpful, correctly addressing the main request with relevant information and some depth.
-Score 4: The response is very helpful, addressing the request thoroughly with accurate and detailed content, but may lack a minor aspect of helpfulness.
-Score 5: The response is exceptionally helpful, providing precise, comprehensive content that fully resolves the request with insight and clarity."""
+Score 1: The model's responses are irrelevant or unhelpful to the user's needs or queries.
+Score 2: The model sometimes provides helpful information, but often fails to address the user's actual needs or questions.
+Score 3: The model generally provides helpful responses that address the user's needs, though it may occasionally miss the mark.
+Score 4: The model regularly provides helpful responses that are well-aligned with the user's inquiries, with only rare inaccuracies.
+Score 5: The model consistently offers highly relevant and useful responses that perfectly cater to the user's needs and inquiries."""
 
 # Fixed suffix that will always be appended
 FIXED_EVAL_SUFFIX = """
@@ -164,17 +164,17 @@ We’d love to hear your feedback! For general feature requests or to submit / s
 
 
 # Default values for compatible mode
-DEFAULT_EVAL_CRITERIA = """Evaluate the helpfulness of the chatbot response given the user's instructions. Focus on relevance, accuracy, and completeness while being objective. Do not consider response length in your evaluation."""
+DEFAULT_EVAL_CRITERIA = """Does the model provide relevant and useful responses to the user's needs or questions?"""
 
-DEFAULT_SCORE_1 = "The response is unhelpful, providing irrelevant or incorrect content that does not address the request."
+DEFAULT_SCORE_1 = "The model's responses are irrelevant or unhelpful to the user's needs or queries."
 
-DEFAULT_SCORE_2 = "The response is partially helpful, missing key elements or including minor inaccuracies, and lacks depth in addressing the request."
+DEFAULT_SCORE_2 = "The model sometimes provides helpful information, but often fails to address the user's actual needs or questions."
 
-DEFAULT_SCORE_3 = "The response is adequately helpful, correctly addressing the main request with relevant information and some depth."
+DEFAULT_SCORE_3 = "The model generally provides helpful responses that address the user's needs, though it may occasionally miss the mark."
 
-DEFAULT_SCORE_4 = "The response is very helpful, addressing the request thoroughly with accurate and detailed content, but may lack a minor aspect of helpfulness."
+DEFAULT_SCORE_4 = "The model regularly provides helpful responses that are well-aligned with the user's inquiries, with only rare inaccuracies."
 
-DEFAULT_SCORE_5 = "The response is exceptionally helpful, providing precise, comprehensive content that fully resolves the request with insight and clarity."
+DEFAULT_SCORE_5 = "The model consistently offers highly relevant and useful responses that perfectly cater to the user's needs and inquiries."
 
 #**What are the Evaluator Prompt Templates based on?**
 
