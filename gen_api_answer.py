@@ -188,11 +188,20 @@ def parse_model_response(response):
 def alternative_parse_model_response(output):
     try:
         print(f"Raw model response: {output}")
+        output = output.strip()
 
         # Remove "Feedback:" prefix if present (case insensitive)
-        output = re.sub(r'^feedback:\s*', '', output.strip(), flags=re.IGNORECASE)
+        output = re.sub(r'^feedback:\s*', '', output, flags=re.IGNORECASE)
+        
+        # New pattern to match [RESULT] X at the beginning
+        begin_result_pattern = r'^\[RESULT\]\s*(\d+)\s*\n*(.*?)$'
+        begin_match = re.search(begin_result_pattern, output, re.DOTALL | re.IGNORECASE)
+        if begin_match:
+            score = int(begin_match.group(1))
+            feedback = begin_match.group(2).strip()
+            return str(score), feedback
 
-        # First, try to match the pattern "... [RESULT] X"
+        # Existing patterns for end-of-string results...
         pattern = r"(.*?)\s*\[RESULT\]\s*[\(\[]?(\d+)[\)\]]?"
         match = re.search(pattern, output, re.DOTALL | re.IGNORECASE)
         if match:
