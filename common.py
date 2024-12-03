@@ -103,7 +103,7 @@ We thank [Clementine Fourrier](https://huggingface.co/clefourrier) and Hugging F
 POLICY_CONTENT = """
 # About Atla
 
-Atla is an applied research organization that trains models as evaluators to capture human preferences. We're a team of researchers, engineers, and operational leaders, with experience spanning a variety of disciplines, all working together to build reliable and understandable AI systems. Our research is informed by our experiences conducting AI safety research at the UK AI Task Force, OpenAI and the Stanford Existential Risks Initiative.
+[Atla](https://www.atla-ai.com/) is an applied research organization that trains models as evaluators to capture human preferences. We're a team of researchers, engineers, and operational leaders, with experience spanning a variety of disciplines, all working together to build reliable and understandable AI systems. Our research is informed by our experiences conducting AI safety research at the UK AI Task Force, OpenAI and the Stanford Existential Risks Initiative.
 <br><br>
 # Our Mission
 
