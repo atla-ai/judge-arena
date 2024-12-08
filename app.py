@@ -2,9 +2,8 @@ import json
 import re
 import random
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime
 import hashlib
-from typing import Dict, List
 
 from dotenv import load_dotenv
 
@@ -14,7 +13,7 @@ import gradio as gr
 from gen_api_answer import (
     get_model_response, 
     parse_model_response,
-    alternative_parse_model_response
+    prometheus_parse_model_response
 )
 
 from random_sample_generation import (
@@ -27,15 +26,12 @@ from utils import Vote
 from common import (
     POLICY_CONTENT,
     ACKNOWLEDGEMENTS,
-    DEFAULT_EVAL_PROMPT,
-    DEFAULT_INPUT,
-    DEFAULT_RESPONSE,
     CSS_STYLES,
     MAIN_TITLE,
     HOW_IT_WORKS,
-    BATTLE_RULES,
-    EVAL_DESCRIPTION,
-    VOTING_HEADER,
+)
+from prompts import (
+    DEFAULT_EVAL_PROMPT,
     DEFAULT_EVAL_PROMPT_EDITABLE,
     FIXED_EVAL_SUFFIX,
     DEFAULT_EVAL_CRITERIA,
@@ -48,7 +44,6 @@ from common import (
 from leaderboard import (
     get_leaderboard,
     get_leaderboard_stats,
-    calculate_elo_change,
     get_model_rankings,
     DEFAULT_ELO,
     K_FACTOR
@@ -85,9 +80,11 @@ def load_model_data():
 model_data = load_model_data()
 
 def store_vote_data(prompt, response_a, response_b, model_a, model_b, winner, judge_id):
+    prompt_value = prompt.value if hasattr(prompt, 'value') else prompt
+    
     vote = Vote(
         timestamp=datetime.now().isoformat(),
-        prompt=prompt,
+        prompt=prompt_value,
         response_a=response_a,
         response_b=response_b,
         model_a=model_a,
@@ -416,13 +413,13 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             # Replace the "Edit Judge Prompt" Accordion section with:
             with gr.Accordion("📝 Edit Judge Prompt", open=False) as prompt_accordion:
                 gr.Markdown("<br>")
-                compatible_mode_toggle = gr.Checkbox(
-                    label="Use a prompt compatible with Prometheus models",
+                use_reference_toggle = gr.Checkbox(
+                    label="Use a reference response",
                     value=False
                 )
                 
-                # Default prompt editor
-                with gr.Column(visible=True) as default_prompt_editor:
+                # Hide the default prompt editor
+                with gr.Column(visible=False) as default_prompt_editor:
                     eval_prompt_editable = gr.TextArea(
                         value=DEFAULT_EVAL_PROMPT_EDITABLE,
                         label="Evaluation Criteria",
@@ -435,8 +432,8 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                     gr.Markdown("*The sample being evaluated is always appended as:*")
                     gr.Markdown(f"```{FIXED_EVAL_SUFFIX}")
                 
-                # Compatible mode editor
-                with gr.Column(visible=False) as compatible_prompt_editor:
+                # Show the compatible mode editor
+                with gr.Column(visible=True) as compatible_prompt_editor:
                     with gr.Row():
                         # Left column - Evaluation Criteria
                         with gr.Column(scale=1):
@@ -447,8 +444,8 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                                 placeholder="Enter the evaluation criteria..."
                             )
                             prometheus_reference = gr.Markdown(
-                                "<br> *This enforces the Prometheus absolute grading prompt template - see [here](https://huggingface.co/prometheus-eval/prometheus-7b-v2.0).*",
-                                visible=False  # Initially hidden
+                                "<br> *By default, we use the Prometheus absolute grading prompt template - see [here](https://huggingface.co/prometheus-eval/prometheus-7b-v2.0).*",
+                                visible=True 
                             )
                         
                         # Right column - Score Descriptions
@@ -658,89 +655,80 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
     )
 
     # Function to toggle visibility based on compatible mode
-    def toggle_compatible_mode(checked):
-        return {
-            ground_truth: gr.update(visible=checked),
-            default_prompt_editor: gr.update(visible=not checked),
-            compatible_prompt_editor: gr.update(visible=checked),
-            prometheus_reference: gr.update(visible=checked),
-        }
+    def toggle_use_reference(checked):
+        if checked:
+            # Get new random samples with ground truth when enabling reference mode
+            human_msg, ai_msg, ground_truth_msg = get_random_human_ai_ground_truth_pair()
+            return {
+                ground_truth: gr.update(visible=True, value=ground_truth_msg),
+                human_input: gr.update(value=human_msg),
+                ai_response: gr.update(value=ai_msg),
+                # Reset other UI elements
+                score_a: gr.update(value=""),
+                critique_a: gr.update(value=""),
+                score_b: gr.update(value=""),
+                critique_b: gr.update(value=""),
+                vote_a: gr.update(interactive=False, variant="primary"),
+                vote_b: gr.update(interactive=False, variant="primary"),
+                vote_tie: gr.update(interactive=False, variant="primary"),
+                model_name_a: gr.update(value="*Model: Hidden*"),
+                model_name_b: gr.update(value="*Model: Hidden*"),
+                random_btn: gr.update(value="🎲", variant="secondary"),
+            }
+        else:
+            # Just hide ground truth when disabling reference mode
+            return {
+                ground_truth: gr.update(visible=False)
+            }
 
-    compatible_mode_toggle.change(
-        fn=toggle_compatible_mode,
-        inputs=[compatible_mode_toggle],
+    # Update the change handler to include all necessary outputs
+    use_reference_toggle.change(
+        fn=toggle_use_reference,
+        inputs=[use_reference_toggle],
         outputs=[
             ground_truth,
-            default_prompt_editor,
-            compatible_prompt_editor,
-            prometheus_reference,
+            human_input,
+            ai_response,
+            score_a,
+            critique_a,
+            score_b,
+            critique_b,
+            vote_a,
+            vote_b,
+            vote_tie,
+            model_name_a,
+            model_name_b,
+            random_btn,
         ]
     )
 
-    # Update the submit function to handle compatible mode
+    # Update the submit function to handle different prompts
     def submit_and_store(
-        compatible_mode,
-        editable_prompt,
+        use_reference,
+        eval_criteria_text_input,
         human_input,
         ai_response,
         ground_truth_input,
-        eval_criteria_text_input,
-        score1_desc,
-        score2_desc,
-        score3_desc,
-        score4_desc,
-        score5_desc,
+        score1_description,
+        score2_description,
+        score3_description,
+        score4_description,
+        score5_description,
     ):
-        if compatible_mode:
-            # Build the prompt using the new format
-            prompt = f"""###Task Description:
-An instruction (might include an Input inside it), a response to evaluate, a reference answer that gets a score of 5, and a score rubric representing an evaluation criteria are given.
-1. Write a detailed feedback that assesses the quality of the response strictly based on the given score rubric, not evaluating in general.
-2. After writing the feedback, write a score that is an integer between 1 and 5. You should refer to the score rubric.
-3. The output format should look as follows: "Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)"
-4. Please do not generate any other openings, closings, or explanations.
+        # Build prompt data dictionary
+        prompt_data = {
+            'human_input': human_input,
+            'ai_response': ai_response,
+            'ground_truth_input': ground_truth_input,
+            'eval_criteria': eval_criteria_text_input,
+            'score1_desc': score1_description,
+            'score2_desc': score2_description,
+            'score3_desc': score3_description,
+            'score4_desc': score4_description,
+            'score5_desc': score5_description,
+        }
 
-###The instruction to evaluate:
-{human_input}
-
-###Response to evaluate:
-{ai_response}
-
-###Reference Answer (Score 5):
-{ground_truth_input}
-
-###Score Rubrics:
-[{eval_criteria_text_input}]
-Score 1: {score1_desc}
-Score 2: {score2_desc}
-Score 3: {score3_desc}
-Score 4: {score4_desc}
-Score 5: {score5_desc}
-
-###Feedback:
-"""
-            final_prompt = prompt
-            use_alternative_prompt = True
-        else:
-            # Combine the editable prompt with fixed suffix
-            full_prompt = editable_prompt + FIXED_EVAL_SUFFIX
-            # Replace variables in the eval prompt
-            variable_values = {'input': human_input, 'response': ai_response}
-            final_prompt = get_final_prompt(full_prompt, variable_values)
-            use_alternative_prompt = False
-
-        # Filter models based on compatible mode
-        if compatible_mode:
-            # Include all models when compatible mode is enabled
-            models = list(model_data.keys())
-        else:
-            # Exclude Prometheus models when not in compatible mode
-            models = [
-                model_name for model_name in model_data.keys()
-                if model_data[model_name]["organization"] != "Prometheus"
-            ]
-
-        # Select two models randomly from the filtered list
+        models = list(model_data.keys())
         model1, model2 = random.sample(models, 2)
         model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
 
@@ -748,31 +736,33 @@ Score 5: {score5_desc}
         response_a = get_model_response(
             model_a,
             model_data.get(model_a),
-            final_prompt,
-            use_alternative_prompt=use_alternative_prompt
+            prompt_data,
+            use_reference=use_reference
         )
         response_b = get_model_response(
             model_b,
             model_data.get(model_b),
-            final_prompt,
-            use_alternative_prompt=use_alternative_prompt
+            prompt_data,
+            use_reference=use_reference
         )
 
-        # Parse the responses based on mode
-        if compatible_mode:
-            score_a_val, critique_a_val = alternative_parse_model_response(response_a)
-            score_b_val, critique_b_val = alternative_parse_model_response(response_b)
+        # Parse the responses based on model, using Prometheus parsing for Prometheus models and JSON parsing for others
+        is_prometheus_a = (model_data.get(model_a)['organization'] == 'Prometheus')
+        is_prometheus_b = (model_data.get(model_b)['organization'] == 'Prometheus')
+
+        if is_prometheus_a:
+            score_a_val, critique_a_val = prometheus_parse_model_response(response_a)
+            score_a_val = f"{score_a_val} / 5"
         else:
             score_a_val, critique_a_val = parse_model_response(response_a)
-            score_b_val, critique_b_val = parse_model_response(response_b)
-
-        # Only append "/ 5" if using the default prompt
-        if not compatible_mode and editable_prompt.strip() == DEFAULT_EVAL_PROMPT_EDITABLE.strip():
             score_a_val = f"{score_a_val} / 5"
-            score_b_val = f"{score_b_val} / 5"
 
-        # Update the last_submission state
-        last_submission.value = {"prompt": final_prompt, "variables": [human_input, ai_response]}
+        if is_prometheus_b:
+            score_b_val, critique_b_val = prometheus_parse_model_response(response_b)
+            score_b_val = f"{score_b_val} / 5"
+        else:
+            score_b_val, critique_b_val = parse_model_response(response_b)
+            score_b_val = f"{score_b_val} / 5"
 
         return (
             score_a_val,
@@ -784,7 +774,7 @@ Score 5: {score5_desc}
             gr.update(interactive=True, variant="primary"),  # vote_tie
             model_a,
             model_b,
-            final_prompt,
+            eval_prompt,
             gr.update(value="*Model: Hidden*"),
             gr.update(value="*Model: Hidden*"),
             gr.update(value="Regenerate judges", variant="secondary", interactive=True),
@@ -795,12 +785,11 @@ Score 5: {score5_desc}
     send_btn.click(
         fn=submit_and_store,
         inputs=[
-            compatible_mode_toggle,
-            eval_prompt_editable,
+            use_reference_toggle,
+            eval_criteria_text,
             human_input,
             ai_response,
             ground_truth,
-            eval_criteria_text,
             score1_description,
             score2_description,
             score3_description,
@@ -828,7 +817,7 @@ Score 5: {score5_desc}
     # Add random button handler
     random_btn.click(
         fn=populate_random_example,
-        inputs=[compatible_mode_toggle],  # Use compatible mode toggle to decide behavior
+        inputs=[use_reference_toggle],  # Use compatible mode toggle to decide behavior
         outputs=[
             human_input, 
             ai_response,
