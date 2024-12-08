@@ -37,7 +37,7 @@ CSS_STYLES = """
         gap: 8px;
     }
 """
-    
+
 # Default Eval Prompt
 EVAL_DESCRIPTION = """
 ## 📝 Tips
@@ -46,43 +46,6 @@ EVAL_DESCRIPTION = """
 - Scoring rubric 
 - Examples (Optional)
 """
-
-DEFAULT_EVAL_PROMPT = """Does the model provide relevant and useful responses to the user's needs or questions?
-
-Scoring Rubric:
-Score 1: The model's responses are irrelevant or unhelpful to the user's needs or queries.
-Score 2: The model sometimes provides helpful information, but often fails to address the user's actual needs or questions.
-Score 3: The model generally provides helpful responses that address the user's needs, though it may occasionally miss the mark.
-Score 4: The model regularly provides helpful responses that are well-aligned with the user's inquiries, with only rare inaccuracies.
-Score 5: The model consistently offers highly relevant and useful responses that perfectly cater to the user's needs and inquiries.
-
-[User Query]: {{input}}
-
-[AI Response]: {{response}}"""
-
-# Split the eval prompt into editable and fixed parts
-DEFAULT_EVAL_PROMPT_EDITABLE = """Does the model provide relevant and useful responses to the user's needs or questions?
-
-Scoring Rubric:
-Score 1: The model's responses are irrelevant or unhelpful to the user's needs or queries.
-Score 2: The model sometimes provides helpful information, but often fails to address the user's actual needs or questions.
-Score 3: The model generally provides helpful responses that address the user's needs, though it may occasionally miss the mark.
-Score 4: The model regularly provides helpful responses that are well-aligned with the user's inquiries, with only rare inaccuracies.
-Score 5: The model consistently offers highly relevant and useful responses that perfectly cater to the user's needs and inquiries."""
-
-# Fixed suffix that will always be appended
-FIXED_EVAL_SUFFIX = """
-[User Query]: {{input}}
-
-[AI Response]: {{response}}"""
-
-# Default Variable Values
-DEFAULT_INPUT = """Which of these animals is least likely to be found in a rainforest?"
-A) Jaguar
-B) Toucan
-C) Polar Bear
-D) Sloth"""
-DEFAULT_RESPONSE = "C) Polar Bear"
 
 # Voting Section Header
 VOTING_HEADER = """
@@ -161,23 +124,3 @@ We are training a general-purpose evaluator that you will soon be able to run in
 # Get in touch
 We’d love to hear your feedback! For general feature requests or to submit / suggest new models to add to the arena, please open up a discussion in the [community](https://huggingface.co/spaces/AtlaAI/judge-arena/discussions) tab. You can also contact us directly on [X](https://x.com/Atla_AI) or [Discord](https://discord.gg/yNpUAMqs).
 \nPlease file any issues on our [Github](https://github.com/atla-ai/judge-arena)."""
-
-
-# Default values for compatible mode
-DEFAULT_EVAL_CRITERIA = """Does the model provide relevant and useful responses to the user's needs or questions?"""
-
-DEFAULT_SCORE_1 = "The model's responses are irrelevant or unhelpful to the user's needs or queries."
-
-DEFAULT_SCORE_2 = "The model sometimes provides helpful information, but often fails to address the user's actual needs or questions."
-
-DEFAULT_SCORE_3 = "The model generally provides helpful responses that address the user's needs, though it may occasionally miss the mark."
-
-DEFAULT_SCORE_4 = "The model regularly provides helpful responses that are well-aligned with the user's inquiries, with only rare inaccuracies."
-
-DEFAULT_SCORE_5 = "The model consistently offers highly relevant and useful responses that perfectly cater to the user's needs and inquiries."
-
-#**What are the Evaluator Prompt Templates based on?**
-
-#As a quick start, we've set up templates that cover the most popular evaluation metrics out there on LLM evaluation / monitoring tools, often known as 'base metrics'. The data samples used in these were randomly picked from popular datasets from academia - [ARC](https://huggingface.co/datasets/allenai/ai2_arc), [Preference Collection](https://huggingface.co/datasets/prometheus-eval/Preference-Collection), [RewardBench](https://huggingface.co/datasets/allenai/reward-bench), [RAGTruth](https://arxiv.org/abs/2401.00396).
-
-#These templates are designed as a starting point to showcase how to interact with the Judge Arena, especially for those less familiar with using LLM judges.

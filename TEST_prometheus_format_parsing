@@ -1,4 +1,4 @@
-from gen_api_answer import alternative_parse_model_response
+from gen_api_answer import prometheus_parse_model_response
 
 test_cases = [
     # Case 1: [RESULT] at beginning
@@ -138,3 +138,4 @@ def run_tests():
 
 if __name__ == "__main__":
     run_tests()
+    

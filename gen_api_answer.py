@@ -6,6 +6,11 @@ import json
 import re
 import os
 import requests
+from prompts import (
+    JUDGE_SYSTEM_PROMPT,
+    PROMETHEUS_PROMPT,
+    PROMETHEUS_PROMPT_WITH_REFERENCE,
+)
 
 # Initialize clients
 anthropic_client = anthropic.Anthropic()
@@ -17,10 +22,6 @@ huggingface_client = OpenAI(
     base_url="https://otb7jglxy6r37af6.us-east-1.aws.endpoints.huggingface.cloud/v1/",
     api_key=hf_api_key
 )
-
-JUDGE_SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction. Your output format should strictly adhere to JSON as follows: {"feedback": "<write feedback>", "result": <numerical score>}. Ensure the output is valid JSON, without additional formatting or explanations."""
-
-ALTERNATIVE_JUDGE_SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction."""
 
 def get_openai_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
     """Get response from OpenAI API"""
@@ -119,8 +120,8 @@ def get_cohere_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, m
 def get_model_response(
     model_name,
     model_info,
-    prompt,
-    use_alternative_prompt=False,
+    prompt_data,
+    use_reference=False,
     max_tokens=500,
     temperature=0
 ):
@@ -131,33 +132,62 @@ def get_model_response(
     api_model = model_info["api_model"]
     organization = model_info["organization"]
 
-    # Select the appropriate system prompt
-    if use_alternative_prompt:
-        system_prompt = ALTERNATIVE_JUDGE_SYSTEM_PROMPT
+    # Determine if model is Prometheus
+    is_prometheus = (organization == "Prometheus")
+
+    # For non-Prometheus models, use the Judge system prompt
+    system_prompt = None if is_prometheus else JUDGE_SYSTEM_PROMPT
+
+    # Select the appropriate base prompt
+    if use_reference:
+        base_prompt = PROMETHEUS_PROMPT_WITH_REFERENCE
     else:
-        system_prompt = JUDGE_SYSTEM_PROMPT
+        base_prompt = PROMETHEUS_PROMPT
+
+    # For non-Prometheus models, replace the specific instruction
+    if not is_prometheus:
+        base_prompt = base_prompt.replace(
+            '3. The output format should look as follows: "Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)"',
+            '3. Your output format should strictly adhere to JSON as follows: {{"feedback": "<write feedback>", "result": <numerical score>}}. Ensure the output is valid JSON, without additional formatting or explanations.'
+        )
+
+    try:
+        # Format the prompt with the provided data, only using available keys
+        final_prompt = base_prompt.format(
+            human_input=prompt_data['human_input'],
+            ai_response=prompt_data['ai_response'],
+            ground_truth_input=prompt_data.get('ground_truth_input', ''),
+            eval_criteria=prompt_data['eval_criteria'],
+            score1_desc=prompt_data['score1_desc'],
+            score2_desc=prompt_data['score2_desc'],
+            score3_desc=prompt_data['score3_desc'],
+            score4_desc=prompt_data['score4_desc'],
+            score5_desc=prompt_data['score5_desc']
+        )
+    except KeyError as e:
+        return f"Error formatting prompt: Missing required field {str(e)}"
 
     try:
         if organization == "OpenAI":
             return get_openai_response(
-                api_model, prompt, system_prompt, max_tokens, temperature
+                api_model, final_prompt, system_prompt, max_tokens, temperature
             )
         elif organization == "Anthropic":
             return get_anthropic_response(
-                api_model, prompt, system_prompt, max_tokens, temperature
+                api_model, final_prompt, system_prompt, max_tokens, temperature
             )
         elif organization == "Prometheus":
             return get_hf_response(
-                api_model, prompt, max_tokens
+                api_model, final_prompt, max_tokens
             )
         elif organization == "Cohere":
             return get_cohere_response(
-                api_model, prompt, system_prompt, max_tokens, temperature
+                api_model, final_prompt, system_prompt, max_tokens, temperature
             )
         else:
             # All other organizations use Together API
             return get_together_response(
-                api_model, prompt, system_prompt, max_tokens, temperature
+                api_model, final_prompt, system_prompt, max_tokens, temperature
             )
     except Exception as e:
         return f"Error with {organization} model {model_name}: {str(e)}"
@@ -185,7 +215,7 @@ def parse_model_response(response):
         print(f"Failed to parse response: {str(e)}")
         return "Error", f"Failed to parse response: {response}"
     
-def alternative_parse_model_response(output):
+def prometheus_parse_model_response(output):
     try:
         print(f"Raw model response: {output}")
         output = output.strip()
