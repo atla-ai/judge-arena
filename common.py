@@ -122,5 +122,5 @@ Atla currently funds this out of our own pocket. We are looking for API credits 
 We are training a general-purpose evaluator that you will soon be able to run in this Judge Arena. Our next step will be to open-source a powerful model that the community can use to run fast and accurate evaluations.
 <br><br>
 # Get in touch
-We’d love to hear your feedback! For general feature requests or to submit / suggest new models to add to the arena, please open up a discussion in the [community](https://huggingface.co/spaces/AtlaAI/judge-arena/discussions) tab. You can also contact us directly on [X](https://x.com/Atla_AI) or [Discord](https://discord.gg/yNpUAMqs).
+We’d love to hear your feedback! For general feature requests or to submit / suggest new models to add to the arena, please open up a discussion in the [community](https://huggingface.co/spaces/AtlaAI/judge-arena/discussions) tab. You can also contact us directly on [X](https://x.com/Atla_AI) or [Discord](https://discord.com/invite/qFCMgkGwUK).
 \nPlease file any issues on our [Github](https://github.com/atla-ai/judge-arena)."""
