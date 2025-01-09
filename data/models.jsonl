@@ -1,21 +1,24 @@
-{"name": "Meta Llama 3.1 70B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"}
-{"name": "Meta Llama 3.1 405B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"}
-{"name": "Gemma 2 27B", "organization": "Google", "license": "Open Source", "api_model": "google/gemma-2-27b-it"}
-{"name": "Gemma 2 9B", "organization": "Google", "license": "Open Source", "api_model": "google/gemma-2-9b-it"}
-{"name": "Qwen 2 Instruct (72B)", "organization": "Alibaba", "license": "Open Source", "api_model": "Qwen/Qwen2-72B-Instruct"}
-{"name": "Mistral (7B) Instruct v0.3", "organization": "Mistral AI", "license": "Open Source", "api_model": "mistralai/Mistral-7B-Instruct-v0.3"}
-{"name": "GPT-4o", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-4o"}
-{"name": "GPT-4 Turbo", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-4-turbo"}
-{"name": "GPT-3.5 Turbo", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-3.5-turbo"}
-{"name": "Claude 3 Haiku", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-haiku-20240307"}
-{"name": "Claude 3 Sonnet", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-sonnet-20240229"}
-{"name": "Claude 3 Opus", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-opus-latest"}
-{"name": "Meta Llama 3.1 8B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"}
-{"name": "Qwen 2.5 72B Instruct Turbo", "organization": "Alibaba", "license": "Open Source", "api_model": "Qwen/Qwen2.5-72B-Instruct-Turbo"}
-{"name": "Qwen 2.5 7B Instruct Turbo", "organization": "Alibaba", "license": "Open Source", "api_model": "Qwen/Qwen2.5-7B-Instruct-Turbo"}
-{"name": "Mistral (7B) Instruct v0.1", "organization": "Mistral AI", "license": "Open Source", "api_model": "mistralai/Mistral-7B-Instruct-v0.1"}
-{"name": "Claude 3.5 Sonnet", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-sonnet-latest"}
-{"name": "Claude 3.5 Haiku", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-haiku-latest"}
-{"name": "Prometheus-7b v2", "organization": "Prometheus", "license": "Open Source", "api_model": "prometheus/prometheus-7b-v2"}
-{"name": "Command-R", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r"}
-{"name": "Command-R Plus", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r-plus"}
+{"name": "Meta Llama 3.1 70B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", "active": false}
+{"name": "Meta Llama 3.1 405B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo", "active": true}
+{"name": "Gemma 2 27B", "organization": "Google", "license": "Open Source", "api_model": "google/gemma-2-27b-it", "active": true}
+{"name": "Gemma 2 9B", "organization": "Google", "license": "Open Source", "api_model": "google/gemma-2-9b-it", "active": true}
+{"name": "Qwen 2 Instruct (72B)", "organization": "Alibaba", "license": "Open Source", "api_model": "Qwen/Qwen2-72B-Instruct", "active": true}
+{"name": "Mistral (7B) Instruct v0.3", "organization": "Mistral AI", "license": "Open Source", "api_model": "mistralai/Mistral-7B-Instruct-v0.3", "active": true}
+{"name": "GPT-4o", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-4o", "active": true}
+{"name": "GPT-4 Turbo", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-4-turbo", "active": true}
+{"name": "GPT-3.5 Turbo", "organization": "OpenAI", "license": "Proprietary", "api_model": "gpt-3.5-turbo", "active": true}
+{"name": "Claude 3 Haiku", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-haiku-20240307", "active": true}
+{"name": "Claude 3 Sonnet", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-sonnet-20240229", "active": true}
+{"name": "Claude 3 Opus", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-opus-latest", "active": true}
+{"name": "Meta Llama 3.1 8B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "active": true}
+{"name": "Qwen 2.5 72B Instruct Turbo", "organization": "Alibaba", "license": "Open Source", "api_model": "Qwen/Qwen2.5-72B-Instruct-Turbo", "active": true}
+{"name": "Qwen 2.5 7B Instruct Turbo", "organization": "Alibaba", "license": "Open Source", "api_model": "Qwen/Qwen2.5-7B-Instruct-Turbo", "active": true}
+{"name": "Mistral (7B) Instruct v0.1", "organization": "Mistral AI", "license": "Open Source", "api_model": "mistralai/Mistral-7B-Instruct-v0.1", "active": true}
+{"name": "Claude 3.5 Sonnet", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-sonnet-latest", "active": true}
+{"name": "Claude 3.5 Haiku", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-haiku-latest", "active": true}
+{"name": "Prometheus-7b v2", "organization": "Prometheus", "license": "Open Source", "api_model": "prometheus/prometheus-7b-v2", "active": true}
+{"name": "Command-R", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r", "active": true}
+{"name": "Command-R Plus", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r-plus", "active": true}
+{"name": "Atla-8B-preview-2024-01-08", "organization": "Atla", "license": "Open Source", "api_model": "Atla-8B-preview-2024-01-08", "active": true}
+{"name": "Meta Llama 3.3 70B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "active": true}
+{"name": "QwQ 32B Preview", "organization": "Qwen", "license": "Open Source", "api_model": "Qwen/QwQ-32B-Preview", "active": true}
