@@ -10,6 +10,8 @@ from prompts import (
     JUDGE_SYSTEM_PROMPT,
     PROMETHEUS_PROMPT,
     PROMETHEUS_PROMPT_WITH_REFERENCE,
+    ATLA_PROMPT,
+    ATLA_PROMPT_WITH_REFERENCE,
 )
 
 # Initialize clients
@@ -18,10 +20,8 @@ openai_client = OpenAI()
 together_client = Together()
 hf_api_key = os.getenv("HF_API_KEY")
 cohere_client = cohere.ClientV2(os.getenv("CO_API_KEY"))
-huggingface_client = OpenAI(
-    base_url="https://otb7jglxy6r37af6.us-east-1.aws.endpoints.huggingface.cloud/v1/",
-    api_key=hf_api_key
-)
+
+
 
 def get_openai_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
     """Get response from OpenAI API"""
@@ -70,7 +70,7 @@ def get_together_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT,
     except Exception as e:
         return f"Error with Together model {model_name}: {str(e)}"
 
-def get_hf_response(model_name, prompt, max_tokens=500):
+def get_prometheus_response(model_name, prompt, max_tokens=500, temperature=0.01): # temperature needs to be > 0 for hf to work
     """Get response from Hugging Face model"""
     try:
         headers = {
@@ -83,7 +83,8 @@ def get_hf_response(model_name, prompt, max_tokens=500):
             "inputs": prompt,
             "parameters": {
                 "max_new_tokens": max_tokens,
-                "return_full_text": False
+                "return_full_text": False,
+                "temperature": temperature
             }
         }
         
@@ -95,6 +96,34 @@ def get_hf_response(model_name, prompt, max_tokens=500):
         return response.json()[0]["generated_text"]
     except Exception as e:
         return f"Error with Hugging Face model {model_name}: {str(e)}"
+
+def get_atla_response(model_name, prompt, max_tokens=500, temperature=0.01):
+    """Get response from HF endpoint for Atla model"""
+    try:
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {hf_api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": max_tokens,
+                "return_full_text": False,
+                "temperature": temperature,
+                "seed": 42
+            }
+        }
+        
+        response = requests.post(
+            "https://azk0vbxyrc64s2v2.us-east-1.aws.endpoints.huggingface.cloud",
+            headers=headers,
+            json=payload
+        )
+        return response.json()[0]["generated_text"]
+    except Exception as e:
+        return f"Error with Atla model {model_name}: {str(e)}"
 
 def get_cohere_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
     """Get response from Cohere API"""
@@ -132,20 +161,23 @@ def get_model_response(
     api_model = model_info["api_model"]
     organization = model_info["organization"]
 
-    # Determine if model is Prometheus
+    # Determine if model is Prometheus or Atla
     is_prometheus = (organization == "Prometheus")
+    is_atla = (organization == "Atla")
 
-    # For non-Prometheus models, use the Judge system prompt
-    system_prompt = None if is_prometheus else JUDGE_SYSTEM_PROMPT
+    # For non-Prometheus/Atla models, use the Judge system prompt
+    system_prompt = None if (is_prometheus or is_atla) else JUDGE_SYSTEM_PROMPT
 
     # Select the appropriate base prompt
-    if use_reference:
+    if is_atla:
+        base_prompt = ATLA_PROMPT_WITH_REFERENCE if use_reference else ATLA_PROMPT
+    elif use_reference:
         base_prompt = PROMETHEUS_PROMPT_WITH_REFERENCE
     else:
         base_prompt = PROMETHEUS_PROMPT
 
-    # For non-Prometheus models, replace the specific instruction
-    if not is_prometheus:
+    # For non-Prometheus/non-Atla models, replace the specific instruction
+    if not (is_prometheus or is_atla):
         base_prompt = base_prompt.replace(
             '3. The output format should look as follows: "Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)"',
             '3. Your output format should strictly adhere to JSON as follows: {{"feedback": "<write feedback>", "result": <numerical score>}}. Ensure the output is valid JSON, without additional formatting or explanations.'
@@ -177,8 +209,12 @@ def get_model_response(
                 api_model, final_prompt, system_prompt, max_tokens, temperature
             )
         elif organization == "Prometheus":
-            return get_hf_response(
-                api_model, final_prompt, max_tokens
+            return get_prometheus_response(
+                api_model, final_prompt, max_tokens, temperature = 0.01
+            )
+        elif organization == "Atla":
+            return get_atla_response(
+                api_model, final_prompt, max_tokens, temperature = 0.01
             )
         elif organization == "Cohere":
             return get_cohere_response(
@@ -269,4 +305,25 @@ def prometheus_parse_model_response(output):
 
     except Exception as e:
         print(f"Failed to parse response: {str(e)}")
+        return "Error", f"Exception during parsing: {str(e)}"
+
+def atla_parse_model_response(output):
+    """Parse response from ATLA model"""
+    try:
+        print(f"Raw Atla model response: {output}")
+        output = output.strip()
+        
+        # Look for the Reasoning and Result sections
+        reasoning_match = re.search(r'\*\*Reasoning:\*\*(.*?)(?=\*\*Result:|$)', output, re.DOTALL)
+        result_match = re.search(r'\*\*Result:\*\*\s*(\d+)', output)
+        
+        if reasoning_match and result_match:
+            feedback = reasoning_match.group(1).strip()
+            score = result_match.group(1)
+            return str(score), feedback
+            
+        return "Error", f"Failed to parse ATLA response format: {output}"
+
+    except Exception as e:
+        print(f"Failed to parse ATLA response: {str(e)}")
         return "Error", f"Exception during parsing: {str(e)}"
