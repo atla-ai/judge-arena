@@ -55,8 +55,8 @@ def get_leaderboard(model_data: Dict, voting_data: List, show_preliminary=True):
     leaderboard = []
     for model in model_data.keys():
         votes = matches[model]
-        # Skip models with < 500 votes if show_preliminary is False
-        if not show_preliminary and votes < 500:
+        # Skip models with < 300 votes if show_preliminary is False
+        if not show_preliminary and votes < 300:
             continue
             
         elo = ratings[model]
@@ -81,6 +81,8 @@ def get_leaderboard_stats(model_data: Dict, voting_data: List) -> str:
     now = datetime.now(timezone.utc)
     total_votes = len(voting_data)
     total_models = len(model_data)
+    # last_updated = now.strftime("%B %d, %Y at %H:%M:%S UTC")
+
     last_updated = now.replace(minute=0, second=0, microsecond=0).strftime(
         "%B %d, %Y at %H:00 UTC"
     )
