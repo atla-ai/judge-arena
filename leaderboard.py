@@ -55,8 +55,8 @@ def get_leaderboard(model_data: Dict, voting_data: List, show_preliminary=True):
     leaderboard = []
     for model in model_data.keys():
         votes = matches[model]
-        # Skip models with < 500 votes if show_preliminary is False
-        if not show_preliminary and votes < 500:
+        # Skip models with < 300 votes if show_preliminary is False
+        if not show_preliminary and votes < 300:
             continue
             
         elo = ratings[model]

@@ -68,7 +68,7 @@ POLICY_CONTENT = """
 
 Atla is an applied research organization that trains models as evaluators to capture human preferences. We're a team of researchers, engineers, and operational leaders, with experience spanning a variety of disciplines, all working together to build reliable and understandable AI systems. Our research is informed by our experiences conducting AI safety research at the UK AI Task Force, OpenAI and the Stanford Existential Risks Initiative.
 <br><br>
-# Our Mission
+# [Our Mission](https://www.atla-ai.com/company)
 
 By creating advanced evaluation models, we enable AI developers to identify and fix risks, leading to safer, more reliable AI that can be trusted and widely used. Our aim is to surpass the current state-of-the-art evaluation methods by training models specifically for evaluation. AIs will probably become very powerful, and perform tasks that are difficult for us to verify. We want to enable humans to oversee AI systems that are solving tasks too difficult for humans to evaluate. 
 Read more about [our approach to scalable oversight](https://www.atla-ai.com/post/scaling-alignment) on our blog.

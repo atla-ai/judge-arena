@@ -33,9 +33,9 @@ Score 5: The model consistently offers highly relevant and useful responses that
 
 # Fixed suffix that will always be appended
 FIXED_EVAL_SUFFIX = """
-[User Query]: {{input}}
+[User Query]: {{human_input}}
 
-[AI Response]: {{response}}"""
+[AI Response]: {{ai_response}}"""
 
 # Define the Prometheus prompt used by default (without reference)
 PROMETHEUS_PROMPT = """###Task Description:
@@ -92,3 +92,66 @@ Score 5: {score5_desc}
 
 # Judge system prompt for non-Prometheus models
 JUDGE_SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction. Your output format should strictly adhere to JSON as follows: {"feedback": "<write feedback>", "result": <numerical score>}. Ensure the output is valid JSON, without additional formatting or explanations.""" 
+
+ATLA_PROMPT = """<|begin_of_text|><|start_header_id|>user<|end_header_id|> You are tasked with evaluating a response based on a given instruction (which may contain an Input) and a scoring rubric that serve as the evaluation standard. Provide a comprehensive feedback on the response quality strictly adhering to the scoring rubric, without any general evaluation. Follow this with a score between 1 and 5, referring to the scoring rubric. Avoid generating any additional opening, closing, or explanations.
+  Here are some rules of the evaluation:
+  (1) You should prioritize evaluating whether the response satisfies the provided rubric. The basis of your score should depend exactly on the rubric. However, the response does not need to explicitly address points raised in the rubric. Rather, evaluate the response based on the criteria outlined in the rubric.
+
+  Your reply should strictly follow this format:
+  **Reasoning:** <Your feedback>
+
+  **Result:** <an integer between 1 and 5>
+
+  Here is the data:
+
+  Instruction:
+  ```
+  {human_input}
+  ```
+
+  Response:
+  ```
+  {ai_response}
+  ```
+
+  Score Rubrics:
+  [{eval_criteria}]
+  Score 1: {score1_desc}
+  Score 2: {score2_desc}
+  Score 3: {score3_desc}
+  Score 4: {score4_desc}
+  Score 5: {score5_desc}
+  <|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
+
+ATLA_PROMPT_WITH_REFERENCE = """You are tasked with evaluating a response based on a given instruction (which may contain an Input) and a scoring rubric and reference answer that serve as the evaluation standard. Provide a comprehensive feedback on the response quality strictly adhering to the scoring rubric, without any general evaluation. Follow this with a score between 1 and 5, referring to the scoring rubric. Avoid generating any additional opening, closing, or explanations.
+
+  Here are some rules of the evaluation:
+  (1) You should prioritize evaluating whether the response satisfies the provided rubric. The basis of your score should depend exactly on the rubric. However, the response does not need to explicitly address points raised in the rubric. Rather, evaluate the response based on the criteria outlined in the rubric.
+
+  Your reply should strictly follow this format:
+  **Reasoning:** <Your feedback>
+
+  **Result:** <an integer between 1 and 5>
+
+  Here is the data:
+
+  Instruction:
+  ```
+  {human_input}
+  ```
+
+  Response:
+  ```
+  {ai_response}
+  ```
+
+  Score Rubrics:
+  [{eval_criteria}]
+  Score 1: {score1_desc}
+  Score 2: {score2_desc}
+  Score 3: {score3_desc}
+  Score 4: {score4_desc}
+  Score 5: {score5_desc}
+
+  Reference answer:
+  {ground_truth_input}"""
