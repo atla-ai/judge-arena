@@ -13,7 +13,8 @@ import gradio as gr
 from gen_api_answer import (
     get_model_response, 
     parse_model_response,
-    prometheus_parse_model_response
+    prometheus_parse_model_response,
+    atla_parse_model_response
 )
 
 from random_sample_generation import (
@@ -112,40 +113,6 @@ def get_final_prompt(eval_prompt, variable_values):
         eval_prompt = eval_prompt.replace("{{" + var + "}}", val)
     return eval_prompt
 
-
-def submit_prompt(eval_prompt, *variable_values):
-    try:
-        variables = parse_variables(eval_prompt)
-        variable_values_dict = {var: val for var, val in zip(variables, variable_values)}
-        final_prompt = get_final_prompt(eval_prompt, variable_values_dict)
-
-        models = list(model_data.keys())
-        model1, model2 = random.sample(models, 2)
-        model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
-
-        response_a = get_model_response(model_a, model_data.get(model_a), final_prompt)
-        response_b = get_model_response(model_b, model_data.get(model_b), final_prompt)
-
-        return (
-            response_a,
-            response_b,
-            gr.update(visible=True),
-            gr.update(visible=True),
-            model_a,
-            model_b,
-            final_prompt,
-        )
-    except Exception as e:
-        print(f"Error in submit_prompt: {str(e)}")
-        return (
-            "Error generating response",
-            "Error generating response",
-            gr.update(visible=False),
-            gr.update(visible=False),
-            None,
-            None,
-            None,
-        )
 
 
 def get_ip(request: gr.Request) -> str:
@@ -492,7 +459,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                     show_preliminary = gr.Checkbox(
                         label="Reveal preliminary results",
                         value=True,  # Checked by default
-                        info="Show all models, including models with less human ratings (< 500 votes)",
+                        info="Show all models, including models with less human ratings (< 300 votes)",
                         interactive=True
                     )
             stats_display = gr.Markdown()
@@ -714,6 +681,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         score3_description,
         score4_description,
         score5_description,
+        is_first_game=False
     ):
         # Build prompt data dictionary
         prompt_data = {
@@ -728,9 +696,40 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             'score5_desc': score5_description,
         }
 
-        models = list(model_data.keys())
-        model1, model2 = random.sample(models, 2)
-        model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
+        # Get list of active models only for matches
+        active_models = [name for name, info in model_data.items() 
+                        if info.get("active", True)]  # Default to True for backward compatibility
+        
+        # Modified model selection logic
+        atla_model = "Atla-8B-preview-2024-01-08"
+        
+        if is_first_game:
+            # For the first game, ensure Atla is one of the models
+            other_models = [m for m in active_models if m != atla_model]
+            other_model = random.choice(other_models)
+            
+            # Randomly assign Atla to either position A or B
+            if random.random() < 0.5:
+                model_a, model_b = atla_model, other_model
+            else:
+                model_a, model_b = other_model, atla_model
+        else:
+            # For subsequent games, Atla appears 30% of the time
+            if random.random() < 0.3:
+                # Include Atla in this battle
+                other_models = [m for m in active_models if m != atla_model]
+                other_model = random.choice(other_models)
+                
+                # Randomly assign Atla to either position A or B
+                if random.random() < 0.5:
+                    model_a, model_b = atla_model, other_model
+                else:
+                    model_a, model_b = other_model, atla_model
+            else:
+                # Battle between two non-Atla models
+                non_atla_models = [m for m in active_models if m != atla_model]
+                model1, model2 = random.sample(non_atla_models, 2)
+                model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
 
         # Get responses from models
         response_a = get_model_response(
@@ -746,12 +745,17 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             use_reference=use_reference
         )
 
-        # Parse the responses based on model, using Prometheus parsing for Prometheus models and JSON parsing for others
+        # Parse the responses based on model, using appropriate parsing for different models
         is_prometheus_a = (model_data.get(model_a)['organization'] == 'Prometheus')
         is_prometheus_b = (model_data.get(model_b)['organization'] == 'Prometheus')
+        is_atla_a = (model_data.get(model_a)['organization'] == 'Atla')
+        is_atla_b = (model_data.get(model_b)['organization'] == 'Atla')
 
         if is_prometheus_a:
             score_a_val, critique_a_val = prometheus_parse_model_response(response_a)
+            score_a_val = f"{score_a_val} / 5"
+        elif is_atla_a:
+            score_a_val, critique_a_val = atla_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
         else:
             score_a_val, critique_a_val = parse_model_response(response_a)
@@ -759,6 +763,9 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
         if is_prometheus_b:
             score_b_val, critique_b_val = prometheus_parse_model_response(response_b)
+            score_b_val = f"{score_b_val} / 5"
+        elif is_atla_b:
+            score_b_val, critique_b_val = atla_parse_model_response(response_b)
             score_b_val = f"{score_b_val} / 5"
         else:
             score_b_val, critique_b_val = parse_model_response(response_b)
@@ -781,9 +788,21 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             gr.update(value="🎲"),  # random_btn
         )
 
-    # Update the click handler to use the editable prompt
+    # Update the click handler to use False for is_first_game after first submission
+    def create_submit_handler():
+        first_game = True
+        
+        def handler(*args):
+            nonlocal first_game
+            result = submit_and_store(*args, first_game)
+            first_game = False  # Set to False after first submission
+            return result
+        
+        return handler
+
+    # Update the send_btn click handler
     send_btn.click(
-        fn=submit_and_store,
+        fn=create_submit_handler(),
         inputs=[
             use_reference_toggle,
             eval_criteria_text,
