@@ -703,7 +703,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         active_models = [name for name, info in model_data.items() 
                         if info.get("active", True)]
         
-        atla_model = "Atla-8B-preview-2024-01-08"
+        atla_model = "Atla-8B-preview"
         
         if is_first_game:
             # For the first game, ensure new model is one of the models to catch up on votes
