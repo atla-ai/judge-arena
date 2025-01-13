@@ -5,3 +5,4 @@ openai
 anthropic
 together
 cohere
+transformers
