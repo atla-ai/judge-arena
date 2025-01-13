@@ -89,7 +89,7 @@ def get_prometheus_response(model_name, prompt, system_prompt=None, max_tokens=5
         # Apply chat template
         model_id = "prometheus-eval/prometheus-7b-v2.0"
         tokenizer = AutoTokenizer.from_pretrained(model_id)
-        formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False)
+        formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         
         payload = {
             "inputs": formatted_prompt,
@@ -127,7 +127,7 @@ def get_atla_response(model_name, prompt, system_prompt=None, max_tokens=500, te
         # Apply chat template
         model_id = "AtlaAI/Atla-8B-preview"  # Update this if using a different model
         tokenizer = AutoTokenizer.from_pretrained(model_id)
-        formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False)
+        formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         
         payload = {
             "inputs": formatted_prompt,
