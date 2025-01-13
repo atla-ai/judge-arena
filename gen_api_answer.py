@@ -12,19 +12,17 @@ from prompts import (
     PROMETHEUS_PROMPT_WITH_REFERENCE,
     ATLA_PROMPT,
     ATLA_PROMPT_WITH_REFERENCE,
-    FLOW_JUDGE_PROMPT
+     FLOW_JUDGE_PROMPT
 )
+from transformers import AutoTokenizer
 
 # Initialize clients
 anthropic_client = anthropic.Anthropic()
 openai_client = OpenAI()
 together_client = Together()
 hf_api_key = os.getenv("HF_API_KEY")
-cohere_client = cohere.ClientV2(os.getenv("CO_API_KEY"))
-
-
 flow_judge_api_key = os.getenv("FLOW_JUDGE_API_KEY")
-
+cohere_client = cohere.ClientV2(os.getenv("CO_API_KEY"))
 
 def get_openai_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
     """Get response from OpenAI API"""
@@ -73,7 +71,7 @@ def get_together_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT,
     except Exception as e:
         return f"Error with Together model {model_name}: {str(e)}"
 
-def get_prometheus_response(model_name, prompt, max_tokens=500, temperature=0.01): # temperature needs to be > 0 for hf to work
+def get_prometheus_response(model_name, prompt, system_prompt=None, max_tokens=500, temperature=0.01):
     """Get response from Hugging Face model"""
     try:
         headers = {
@@ -82,8 +80,19 @@ def get_prometheus_response(model_name, prompt, max_tokens=500, temperature=0.01
             "Content-Type": "application/json"
         }
         
+        # Create messages list for chat template
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        
+        # Apply chat template
+        model_id = "prometheus-eval/prometheus-7b-v2.0"
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False)
+        
         payload = {
-            "inputs": prompt,
+            "inputs": formatted_prompt,
             "parameters": {
                 "max_new_tokens": max_tokens,
                 "return_full_text": False,
@@ -100,7 +109,7 @@ def get_prometheus_response(model_name, prompt, max_tokens=500, temperature=0.01
     except Exception as e:
         return f"Error with Hugging Face model {model_name}: {str(e)}"
 
-def get_atla_response(model_name, prompt, max_tokens=500, temperature=0.01):
+def get_atla_response(model_name, prompt, system_prompt=None, max_tokens=500, temperature=0.01):
     """Get response from HF endpoint for Atla model"""
     try:
         headers = {
@@ -109,13 +118,25 @@ def get_atla_response(model_name, prompt, max_tokens=500, temperature=0.01):
             "Content-Type": "application/json"
         }
         
+        # Create messages list for chat template
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        
+        # Apply chat template
+        model_id = "AtlaAI/Atla-8B-preview"  # Update this if using a different model
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False)
+        
         payload = {
-            "inputs": prompt,
+            "inputs": formatted_prompt,
             "parameters": {
                 "max_new_tokens": max_tokens,
                 "return_full_text": False,
                 "temperature": temperature,
-                "seed": 42
+                "seed": 42,
+                "add_generation_prompt": True
             }
         }
         
@@ -128,27 +149,6 @@ def get_atla_response(model_name, prompt, max_tokens=500, temperature=0.01):
     except Exception as e:
         return f"Error with Atla model {model_name}: {str(e)}"
 
-def get_cohere_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
-    """Get response from Cohere API"""
-    try:
-        response = cohere_client.chat(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=max_tokens,
-            temperature=temperature
-        )
-        # Extract the text from the content items
-        content_items = response.message.content
-        if isinstance(content_items, list):
-            # Get the text from the first content item
-            return content_items[0].text
-        return str(content_items)  # Fallback if it's not a list
-    except Exception as e:
-        return f"Error with Cohere model {model_name}: {str(e)}"
-    
 def get_flow_judge_response(model_name, prompt, max_tokens=500, temperature=0.1, top_p=0.95) -> str:
     """Get response from Flow Judge"""
     try:
@@ -173,6 +173,27 @@ def get_flow_judge_response(model_name, prompt, max_tokens=500, temperature=0.1,
     except Exception as e:
         return f"Error with Flow Judge completions model {model_name}: {str(e)}"
 
+def get_cohere_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
+    """Get response from Cohere API"""
+    try:
+        response = cohere_client.chat(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature
+        )
+        # Extract the text from the content items
+        content_items = response.message.content
+        if isinstance(content_items, list):
+            # Get the text from the first content item
+            return content_items[0].text
+        return str(content_items)  # Fallback if it's not a list
+    except Exception as e:
+        return f"Error with Cohere model {model_name}: {str(e)}"
+
 def get_model_response(
     model_name,
     model_info,
@@ -188,21 +209,22 @@ def get_model_response(
     api_model = model_info["api_model"]
     organization = model_info["organization"]
 
-    # Determine if model is Prometheus or Atla
+    # Determine if model is Prometheus or Atla or Flow Judge
     is_prometheus = (organization == "Prometheus")
     is_atla = (organization == "Atla")
     is_flow_judge = (organization == "Flow AI")
-    # For non-Prometheus/Atla models, use the Judge system prompt
+    # For non-Prometheus/Atla models/Flow Judge, use the Judge system prompt
     system_prompt = None if (is_prometheus or is_atla or is_flow_judge) else JUDGE_SYSTEM_PROMPT
 
     # Select the appropriate base prompt
+
     if is_atla:
         base_prompt = ATLA_PROMPT_WITH_REFERENCE if use_reference else ATLA_PROMPT
     elif is_flow_judge:
         base_prompt = FLOW_JUDGE_PROMPT
     else:
         base_prompt = PROMETHEUS_PROMPT_WITH_REFERENCE if use_reference else PROMETHEUS_PROMPT
-
+    
     # For non-Prometheus/non-Atla models, replace the specific instruction
     if not (is_prometheus or is_atla or is_flow_judge):
         base_prompt = base_prompt.replace(
@@ -224,6 +246,7 @@ def get_model_response(
                 score4_desc=prompt_data['score4_desc'],
                 score5_desc=prompt_data['score5_desc']
             )
+
         else:
             human_input = f"<user_input>\n{prompt_data['human_input']}\n</user_input>"
             ai_response = f"<response>\n{prompt_data['ai_response']}\n</response>"
@@ -249,6 +272,7 @@ def get_model_response(
                 EVALUATION_CRITERIA=eval_criteria,
                 RUBRIC=rubric
             )
+        
     except KeyError as e:
         return f"Error formatting prompt: Missing required field {str(e)}"
 
@@ -263,11 +287,11 @@ def get_model_response(
             )
         elif organization == "Prometheus":
             return get_prometheus_response(
-                api_model, final_prompt, max_tokens, temperature = 0.01
+                api_model, final_prompt, system_prompt, max_tokens, temperature = 0.01
             )
         elif organization == "Atla":
             return get_atla_response(
-                api_model, final_prompt, max_tokens, temperature = 0.01
+                api_model, final_prompt, system_prompt, max_tokens, temperature = 0.01
             )
         elif organization == "Cohere":
             return get_cohere_response(
@@ -290,6 +314,10 @@ def parse_model_response(response):
         # Debug print
         print(f"Raw model response: {response}")
 
+        # If response is already a dictionary, use it directly
+        if isinstance(response, dict):
+            return str(response.get("result", "N/A")), response.get("feedback", "N/A")
+
         # First try to parse the entire response as JSON
         try:
             data = json.loads(response)
@@ -306,6 +334,16 @@ def parse_model_response(response):
     except Exception as e:
         # Debug print for error case
         print(f"Failed to parse response: {str(e)}")
+        
+        # If the error message itself contains valid JSON, try to parse that
+        try:
+            error_json_match = re.search(r"{.*}", str(e), re.DOTALL)
+            if error_json_match:
+                data = json.loads(error_json_match.group(0))
+                return str(data.get("result", "N/A")), data.get("feedback", "N/A")
+        except:
+            pass
+            
         return "Error", f"Failed to parse response: {response}"
     
 def prometheus_parse_model_response(output):
@@ -363,6 +401,27 @@ def prometheus_parse_model_response(output):
     except Exception as e:
         print(f"Failed to parse response: {str(e)}")
         return "Error", f"Exception during parsing: {str(e)}"
+
+def atla_parse_model_response(output):
+    """Parse response from ATLA model"""
+    try:
+        print(f"Raw Atla model response: {output}")
+        output = output.strip()
+        
+        # Look for the Reasoning and Result sections
+        reasoning_match = re.search(r'\*\*Reasoning:\*\*(.*?)(?=\*\*Result:|$)', output, re.DOTALL)
+        result_match = re.search(r'\*\*Result:\*\*\s*(\d+)', output)
+        
+        if reasoning_match and result_match:
+            feedback = reasoning_match.group(1).strip()
+            score = result_match.group(1)
+            return str(score), feedback
+            
+        return "Error", f"Failed to parse ATLA response format: {output}"
+
+    except Exception as e:
+        print(f"Failed to parse ATLA response: {str(e)}")
+        return "Error", f"Exception during parsing: {str(e)}"
     
 def flow_judge_parse_model_response(output):
     try:
@@ -386,25 +445,4 @@ def flow_judge_parse_model_response(output):
         
     except Exception as e:
         print(f"Failed to parse response: {str(e)}")
-        return "Error", f"Exception during parsing: {str(e)}"
-    
-def atla_parse_model_response(output):
-    """Parse response from ATLA model"""
-    try:
-        print(f"Raw Atla model response: {output}")
-        output = output.strip()
-        
-        # Look for the Reasoning and Result sections
-        reasoning_match = re.search(r'\*\*Reasoning:\*\*(.*?)(?=\*\*Result:|$)', output, re.DOTALL)
-        result_match = re.search(r'\*\*Result:\*\*\s*(\d+)', output)
-        
-        if reasoning_match and result_match:
-            feedback = reasoning_match.group(1).strip()
-            score = result_match.group(1)
-            return str(score), feedback
-            
-        return "Error", f"Failed to parse ATLA response format: {output}"
-
-    except Exception as e:
-        print(f"Failed to parse ATLA response: {str(e)}")
         return "Error", f"Exception during parsing: {str(e)}"
