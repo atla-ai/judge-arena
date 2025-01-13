@@ -4,17 +4,17 @@ import random
 from collections import defaultdict
 from datetime import datetime
 import hashlib
+import gradio as gr
 
 from dotenv import load_dotenv
-
 load_dotenv()
 
-import gradio as gr
 from gen_api_answer import (
     get_model_response, 
     parse_model_response,
     prometheus_parse_model_response,
-    atla_parse_model_response
+    atla_parse_model_response,
+    flow_judge_parse_model_response
 )
 
 from random_sample_generation import (
@@ -23,7 +23,9 @@ from random_sample_generation import (
     generate_ai_response
 )   
 from db import add_vote, create_db_connection, get_votes
+
 from utils import Vote
+
 from common import (
     POLICY_CONTENT,
     ACKNOWLEDGEMENTS,
@@ -669,7 +671,10 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         ]
     )
 
-    # Update the submit function to handle different prompts
+    # Add a new state variable to track first game
+    first_game_state = gr.State(True)  # Initialize as True
+
+    # Update the submit function to use the state variable
     def submit_and_store(
         use_reference,
         eval_criteria_text_input,
@@ -681,7 +686,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         score3_description,
         score4_description,
         score5_description,
-        is_first_game=False
+        is_first_game,  # Add state variable as input
     ):
         # Build prompt data dictionary
         prompt_data = {
@@ -698,37 +703,36 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
         # Get list of active models only for matches
         active_models = [name for name, info in model_data.items() 
-                        if info.get("active", True)]  # Default to True for backward compatibility
+                        if info.get("active", True)]
         
-        # Modified model selection logic
-        atla_model = "Atla-8B-preview-2024-01-08"
+        atla_model = "Atla-8B-preview"
         
         if is_first_game:
-            # For the first game, ensure Atla is one of the models
+            # For the first game, ensure new model is one of the models to catch up on votes
             other_models = [m for m in active_models if m != atla_model]
             other_model = random.choice(other_models)
             
-            # Randomly assign Atla to either position A or B
+            # Randomly assign new model to either position A or B
             if random.random() < 0.5:
                 model_a, model_b = atla_model, other_model
             else:
                 model_a, model_b = other_model, atla_model
         else:
-            # For subsequent games, Atla appears 30% of the time
-            if random.random() < 0.3:
-                # Include Atla in this battle
-                other_models = [m for m in active_models if m != atla_model]
+            # For subsequent games, new models appears 40% of the time
+            if random.random() < 0.4:
+                # Randomly choose between new models
+                new_model = random.choice(["Atla-8B-preview", "Flow-Judge-1.0"])
+                other_models = [m for m in active_models if m not in [new_model, "Atla-8B-preview", "Flow-Judge-1.0"]]
                 other_model = random.choice(other_models)
                 
-                # Randomly assign Atla to either position A or B
                 if random.random() < 0.5:
-                    model_a, model_b = atla_model, other_model
+                    model_a, model_b = new_model, other_model
                 else:
-                    model_a, model_b = other_model, atla_model
+                    model_a, model_b = other_model, new_model
             else:
-                # Battle between two non-Atla models
-                non_atla_models = [m for m in active_models if m != atla_model]
-                model1, model2 = random.sample(non_atla_models, 2)
+                # For other cases, exclude both Atla and Flow-Judge
+                non_special_models = [m for m in active_models if m not in ["Atla-8B-preview", "Flow-Judge-1.0"]]
+                model1, model2 = random.sample(non_special_models, 2)
                 model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
 
         # Get responses from models
@@ -750,12 +754,17 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         is_prometheus_b = (model_data.get(model_b)['organization'] == 'Prometheus')
         is_atla_a = (model_data.get(model_a)['organization'] == 'Atla')
         is_atla_b = (model_data.get(model_b)['organization'] == 'Atla')
+        is_flow_judge_a = (model_data.get(model_a)['organization'] == 'Flow AI')
+        is_flow_judge_b = (model_data.get(model_b)['organization'] == 'Flow AI')    
 
         if is_prometheus_a:
             score_a_val, critique_a_val = prometheus_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
         elif is_atla_a:
             score_a_val, critique_a_val = atla_parse_model_response(response_a)
+            score_a_val = f"{score_a_val} / 5"
+        elif is_flow_judge_a:
+            score_a_val, critique_a_val = flow_judge_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
         else:
             score_a_val, critique_a_val = parse_model_response(response_a)
@@ -766,6 +775,9 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             score_b_val = f"{score_b_val} / 5"
         elif is_atla_b:
             score_b_val, critique_b_val = atla_parse_model_response(response_b)
+            score_b_val = f"{score_b_val} / 5"
+        elif is_flow_judge_b:
+            score_b_val, critique_b_val = flow_judge_parse_model_response(response_b)
             score_b_val = f"{score_b_val} / 5"
         else:
             score_b_val, critique_b_val = parse_model_response(response_b)
@@ -786,6 +798,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             gr.update(value="*Model: Hidden*"),
             gr.update(value="Regenerate judges", variant="secondary", interactive=True),
             gr.update(value="🎲"),  # random_btn
+            False,  # Set first_game_state to False after first submission
         )
 
     # Update the click handler to use False for is_first_game after first submission
@@ -802,7 +815,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
     # Update the send_btn click handler
     send_btn.click(
-        fn=create_submit_handler(),
+        fn=submit_and_store,
         inputs=[
             use_reference_toggle,
             eval_criteria_text,
@@ -814,6 +827,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             score3_description,
             score4_description,
             score5_description,
+            first_game_state,  # Add first_game_state as input
         ],
         outputs=[
             score_a,
@@ -830,6 +844,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_b,
             send_btn,
             random_btn,
+            first_game_state,  # Add first_game_state as output
         ],
     )
 

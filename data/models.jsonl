@@ -19,6 +19,7 @@
 {"name": "Prometheus-7b v2", "organization": "Prometheus", "license": "Open Source", "api_model": "prometheus/prometheus-7b-v2", "active": true}
 {"name": "Command-R", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r", "active": true}
 {"name": "Command-R Plus", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r-plus", "active": true}
-{"name": "Atla-8B-preview-2024-01-08", "organization": "Atla", "license": "Open Source", "api_model": "Atla-8B-preview-2024-01-08", "active": true}
+{"name": "Atla-8B-preview", "organization": "Atla", "license": "Open Source", "api_model": "Atla-8B-preview", "active": true}
 {"name": "Meta Llama 3.3 70B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "active": true}
 {"name": "QwQ 32B Preview", "organization": "Qwen", "license": "Open Source", "api_model": "Qwen/QwQ-32B-Preview", "active": true}
+{"name": "Flow-Judge-v0.1", "organization": "Flow AI", "license": "Open Source", "api_model": "Flow-Judge-v0.1-4.65bpw-exl2", "active": true}
