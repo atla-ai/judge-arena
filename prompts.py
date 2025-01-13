@@ -90,6 +90,71 @@ Score 5: {score5_desc}
 ###Feedback:
 """
 
+# Judge system prompt for non-Prometheus models
+JUDGE_SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction. Your output format should strictly adhere to JSON as follows: {"feedback": "<write feedback>", "result": <numerical score>}. Ensure the output is valid JSON, without additional formatting or explanations.""" 
+
+ATLA_PROMPT = """You are tasked with evaluating a response based on a given instruction (which may contain an Input) and a scoring rubric that serve as the evaluation standard. Provide a comprehensive feedback on the response quality strictly adhering to the scoring rubric, without any general evaluation. Follow this with a score between 1 and 5, referring to the scoring rubric. Avoid generating any additional opening, closing, or explanations.
+  Here are some rules of the evaluation:
+  (1) You should prioritize evaluating whether the response satisfies the provided rubric. The basis of your score should depend exactly on the rubric. However, the response does not need to explicitly address points raised in the rubric. Rather, evaluate the response based on the criteria outlined in the rubric.
+
+  Your reply should strictly follow this format:
+  **Reasoning:** <Your feedback>
+
+  **Result:** <an integer between 1 and 5>
+
+  Here is the data:
+
+  Instruction:
+  ```
+  {human_input}
+  ```
+
+  Response:
+  ```
+  {ai_response}
+  ```
+
+  Score Rubrics:
+  [{eval_criteria}]
+  Score 1: {score1_desc}
+  Score 2: {score2_desc}
+  Score 3: {score3_desc}
+  Score 4: {score4_desc}
+  Score 5: {score5_desc}"""
+
+ATLA_PROMPT_WITH_REFERENCE = """You are tasked with evaluating a response based on a given instruction (which may contain an Input) and a scoring rubric and reference answer that serve as the evaluation standard. Provide a comprehensive feedback on the response quality strictly adhering to the scoring rubric, without any general evaluation. Follow this with a score between 1 and 5, referring to the scoring rubric. Avoid generating any additional opening, closing, or explanations.
+
+  Here are some rules of the evaluation:
+  (1) You should prioritize evaluating whether the response satisfies the provided rubric. The basis of your score should depend exactly on the rubric. However, the response does not need to explicitly address points raised in the rubric. Rather, evaluate the response based on the criteria outlined in the rubric.
+
+  Your reply should strictly follow this format:
+  **Reasoning:** <Your feedback>
+
+  **Result:** <an integer between 1 and 5>
+
+  Here is the data:
+
+  Instruction:
+  ```
+  {human_input}
+  ```
+
+  Response:
+  ```
+  {ai_response}
+  ```
+
+  Score Rubrics:
+  [{eval_criteria}]
+  Score 1: {score1_desc}
+  Score 2: {score2_desc}
+  Score 3: {score3_desc}
+  Score 4: {score4_desc}
+  Score 5: {score5_desc}
+
+  Reference answer:
+  {ground_truth_input}"""
+
 # Define the Flow Judge prompt
 FLOW_JUDGE_PROMPT = """# GOAL
 Your job is to evaluate a task carried out by an AI system powered by a large \
@@ -143,69 +208,3 @@ to specific aspects of the output and comparing them to the rubric.
 after the feedback.
 
 Please accurately evaluate the task. Strictly adhere to the evaluation criteria and rubric."""
-
-# Judge system prompt for non-Prometheus models
-JUDGE_SYSTEM_PROMPT = """Please act as an impartial judge and evaluate based on the user's instruction. Your output format should strictly adhere to JSON as follows: {"feedback": "<write feedback>", "result": <numerical score>}. Ensure the output is valid JSON, without additional formatting or explanations.""" 
-
-ATLA_PROMPT = """<|begin_of_text|><|start_header_id|>user<|end_header_id|> You are tasked with evaluating a response based on a given instruction (which may contain an Input) and a scoring rubric that serve as the evaluation standard. Provide a comprehensive feedback on the response quality strictly adhering to the scoring rubric, without any general evaluation. Follow this with a score between 1 and 5, referring to the scoring rubric. Avoid generating any additional opening, closing, or explanations.
-  Here are some rules of the evaluation:
-  (1) You should prioritize evaluating whether the response satisfies the provided rubric. The basis of your score should depend exactly on the rubric. However, the response does not need to explicitly address points raised in the rubric. Rather, evaluate the response based on the criteria outlined in the rubric.
-
-  Your reply should strictly follow this format:
-  **Reasoning:** <Your feedback>
-
-  **Result:** <an integer between 1 and 5>
-
-  Here is the data:
-
-  Instruction:
-  ```
-  {human_input}
-  ```
-
-  Response:
-  ```
-  {ai_response}
-  ```
-
-  Score Rubrics:
-  [{eval_criteria}]
-  Score 1: {score1_desc}
-  Score 2: {score2_desc}
-  Score 3: {score3_desc}
-  Score 4: {score4_desc}
-  Score 5: {score5_desc}
-  <|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
-
-ATLA_PROMPT_WITH_REFERENCE = """You are tasked with evaluating a response based on a given instruction (which may contain an Input) and a scoring rubric and reference answer that serve as the evaluation standard. Provide a comprehensive feedback on the response quality strictly adhering to the scoring rubric, without any general evaluation. Follow this with a score between 1 and 5, referring to the scoring rubric. Avoid generating any additional opening, closing, or explanations.
-
-  Here are some rules of the evaluation:
-  (1) You should prioritize evaluating whether the response satisfies the provided rubric. The basis of your score should depend exactly on the rubric. However, the response does not need to explicitly address points raised in the rubric. Rather, evaluate the response based on the criteria outlined in the rubric.
-
-  Your reply should strictly follow this format:
-  **Reasoning:** <Your feedback>
-
-  **Result:** <an integer between 1 and 5>
-
-  Here is the data:
-
-  Instruction:
-  ```
-  {human_input}
-  ```
-
-  Response:
-  ```
-  {ai_response}
-  ```
-
-  Score Rubrics:
-  [{eval_criteria}]
-  Score 1: {score1_desc}
-  Score 2: {score2_desc}
-  Score 3: {score3_desc}
-  Score 4: {score4_desc}
-  Score 5: {score5_desc}
-
-  Reference answer:
-  {ground_truth_input}"""
