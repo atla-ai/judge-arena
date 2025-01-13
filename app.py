@@ -4,18 +4,17 @@ import random
 from collections import defaultdict
 from datetime import datetime
 import hashlib
+import gradio as gr
 
 from dotenv import load_dotenv
-
 load_dotenv()
 
-import gradio as gr
 from gen_api_answer import (
     get_model_response, 
     parse_model_response,
     prometheus_parse_model_response,
     atla_parse_model_response,
-    flow_judge_parse_model_response,
+    flow_judge_parse_model_response
 )
 
 from random_sample_generation import (
@@ -24,7 +23,9 @@ from random_sample_generation import (
     generate_ai_response
 )   
 from db import add_vote, create_db_connection, get_votes
+
 from utils import Vote
+
 from common import (
     POLICY_CONTENT,
     ACKNOWLEDGEMENTS,
@@ -717,18 +718,21 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             else:
                 model_a, model_b = other_model, atla_model
         else:
-            # For subsequent games, new model appears 30% of the time
-            if random.random() < 0.3:
-                other_models = [m for m in active_models if m != atla_model]
+            # For subsequent games, new models appears 40% of the time
+            if random.random() < 0.4:
+                # Randomly choose between new models
+                new_model = random.choice(["Atla-8B-preview", "Flow-Judge-1.0"])
+                other_models = [m for m in active_models if m not in [new_model, "Atla-8B-preview", "Flow-Judge-1.0"]]
                 other_model = random.choice(other_models)
                 
                 if random.random() < 0.5:
-                    model_a, model_b = atla_model, other_model
+                    model_a, model_b = new_model, other_model
                 else:
-                    model_a, model_b = other_model, atla_model
+                    model_a, model_b = other_model, new_model
             else:
-                non_atla_models = [m for m in active_models if m != atla_model]
-                model1, model2 = random.sample(non_atla_models, 2)
+                # For other cases, exclude both Atla and Flow-Judge
+                non_special_models = [m for m in active_models if m not in ["Atla-8B-preview", "Flow-Judge-1.0"]]
+                model1, model2 = random.sample(non_special_models, 2)
                 model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
 
         # Get responses from models
@@ -750,9 +754,8 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         is_prometheus_b = (model_data.get(model_b)['organization'] == 'Prometheus')
         is_atla_a = (model_data.get(model_a)['organization'] == 'Atla')
         is_atla_b = (model_data.get(model_b)['organization'] == 'Atla')
-        
         is_flow_judge_a = (model_data.get(model_a)['organization'] == 'Flow AI')
-        is_flow_judge_b = (model_data.get(model_b)['organization'] == 'Flow AI')
+        is_flow_judge_b = (model_data.get(model_b)['organization'] == 'Flow AI')    
 
         if is_prometheus_a:
             score_a_val, critique_a_val = prometheus_parse_model_response(response_a)
