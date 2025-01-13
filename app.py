@@ -14,7 +14,8 @@ from gen_api_answer import (
     get_model_response, 
     parse_model_response,
     prometheus_parse_model_response,
-    atla_parse_model_response
+    atla_parse_model_response,
+    flow_judge_parse_model_response,
 )
 
 from random_sample_generation import (
@@ -749,12 +750,18 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         is_prometheus_b = (model_data.get(model_b)['organization'] == 'Prometheus')
         is_atla_a = (model_data.get(model_a)['organization'] == 'Atla')
         is_atla_b = (model_data.get(model_b)['organization'] == 'Atla')
+        
+        is_flow_judge_a = (model_data.get(model_a)['organization'] == 'Flow AI')
+        is_flow_judge_b = (model_data.get(model_b)['organization'] == 'Flow AI')
 
         if is_prometheus_a:
             score_a_val, critique_a_val = prometheus_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
         elif is_atla_a:
             score_a_val, critique_a_val = atla_parse_model_response(response_a)
+            score_a_val = f"{score_a_val} / 5"
+        elif is_flow_judge_a:
+            score_a_val, critique_a_val = flow_judge_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
         else:
             score_a_val, critique_a_val = parse_model_response(response_a)
@@ -765,6 +772,9 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             score_b_val = f"{score_b_val} / 5"
         elif is_atla_b:
             score_b_val, critique_b_val = atla_parse_model_response(response_b)
+            score_b_val = f"{score_b_val} / 5"
+        elif is_flow_judge_b:
+            score_b_val, critique_b_val = flow_judge_parse_model_response(response_b)
             score_b_val = f"{score_b_val} / 5"
         else:
             score_b_val, critique_b_val = parse_model_response(response_b)
