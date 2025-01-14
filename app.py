@@ -721,8 +721,8 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             # For subsequent games, new models appears 40% of the time
             if random.random() < 0.4:
                 # Randomly choose between new models
-                new_model = random.choice(["Atla-8B-preview", "Flow-Judge-1.0"])
-                other_models = [m for m in active_models if m not in [new_model, "Atla-8B-preview", "Flow-Judge-1.0"]]
+                new_model = random.choice(["Atla-8B-preview"]) # add "Flow-Judge-1.0" once ready
+                other_models = [m for m in active_models if m not in [new_model]]
                 other_model = random.choice(other_models)
                 
                 if random.random() < 0.5:
@@ -731,7 +731,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                     model_a, model_b = other_model, new_model
             else:
                 # For other cases, exclude both Atla and Flow-Judge
-                non_special_models = [m for m in active_models if m not in ["Atla-8B-preview", "Flow-Judge-1.0"]]
+                non_special_models = [m for m in active_models if m not in new_model]
                 model1, model2 = random.sample(non_special_models, 2)
                 model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
 
