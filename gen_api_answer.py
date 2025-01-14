@@ -88,7 +88,7 @@ def get_prometheus_response(model_name, prompt, system_prompt=None, max_tokens=5
         
         # Apply chat template
         model_id = "prometheus-eval/prometheus-7b-v2.0"
-        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_api_key)
         formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         
         payload = {
@@ -125,8 +125,8 @@ def get_atla_response(model_name, prompt, system_prompt=None, max_tokens=500, te
         messages.append({"role": "user", "content": prompt})
         
         # Apply chat template
-        model_id = "meta-llama/Llama-3.1-8B"
-        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        model_id = "AtlaAI/Atla-8B-preview"
+        tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_api_key)
         formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         
         payload = {
