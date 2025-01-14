@@ -707,7 +707,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         
         
         # Define new models list
-        new_models = ["Atla-8B-preview", "Flow-Judge-1.0"]  # add "Flow-Judge-1.0" once ready
+        new_models = ["Atla-8B-preview", "Flow-Judge-v0.1"] 
         
         if is_first_game:
             # For the first game, ensure new model is one of the models to catch up on votes
