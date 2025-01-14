@@ -149,11 +149,11 @@ def get_atla_response(model_name, prompt, system_prompt=None, max_tokens=500, te
     except Exception as e:
         return f"Error with Atla model {model_name}: {str(e)}"
 
-def get_flow_judge_response(model_name, prompt, max_tokens=500, temperature=0.1, top_p=0.95) -> str:
+def get_flow_judge_response(model_name, prompt, max_tokens=2048, temperature=0.1, top_p=0.95) -> str:
     """Get response from Flow Judge"""
     try:
         response = requests.post(
-            "https://tsukuyomi.tailfa581.ts.net/v1/chat/completions",
+            "https://arena.flow-ai.io/v1/chat/completions",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {flow_judge_api_key}"
@@ -165,7 +165,8 @@ def get_flow_judge_response(model_name, prompt, max_tokens=500, temperature=0.1,
                 ],
                 "max_tokens": max_tokens,
                 "temperature": temperature,
-                "top_p": top_p
+                "top_p": top_p,
+                "stop": None
             }
         )
         response.raise_for_status()
@@ -299,7 +300,7 @@ def get_model_response(
             )
         elif organization == "Flow AI":
             return get_flow_judge_response(
-                api_model, final_prompt, max_tokens, temperature
+                api_model, final_prompt, # Keep default hps
             )
         else:
             # All other organizations use Together API
