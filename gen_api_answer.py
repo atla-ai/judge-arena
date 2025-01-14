@@ -15,14 +15,12 @@ from prompts import (
      FLOW_JUDGE_PROMPT
 )
 from transformers import AutoTokenizer
-from huggingface_hub import login
 
 # Initialize clients
 anthropic_client = anthropic.Anthropic()
 openai_client = OpenAI()
 together_client = Together()
 hf_api_key = os.getenv("HF_API_KEY")
-login(hf_api_key)
 flow_judge_api_key = os.getenv("FLOW_JUDGE_API_KEY")
 cohere_client = cohere.ClientV2(os.getenv("CO_API_KEY"))
 
@@ -127,7 +125,7 @@ def get_atla_response(model_name, prompt, system_prompt=None, max_tokens=500, te
         messages.append({"role": "user", "content": prompt})
         
         # Apply chat template
-        model_id = "AtlaAI/Atla-8B-preview"  # Update this if using a different model
+        model_id = "meta-llama/Llama-3.1-8B"
         tokenizer = AutoTokenizer.from_pretrained(model_id)
         formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         
