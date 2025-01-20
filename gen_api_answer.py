@@ -23,7 +23,7 @@ together_client = Together()
 hf_api_key = os.getenv("HF_API_KEY")
 flow_judge_api_key = os.getenv("FLOW_JUDGE_API_KEY")
 cohere_client = cohere.ClientV2(os.getenv("CO_API_KEY"))
-
+salesforce_api_key = os.getenv("SALESFORCE_API_KEY")
 def get_openai_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
     """Get response from OpenAI API"""
     try:
@@ -195,6 +195,36 @@ def get_cohere_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, m
     except Exception as e:
         return f"Error with Cohere model {model_name}: {str(e)}"
 
+def get_salesforce_response(model_name, prompt, system_prompt=None, max_tokens=2048, temperature=0):
+    """Get response from Salesforce Research API"""
+    try:
+        headers = {
+            'accept': 'application/json',
+            "content-type": "application/json",
+            "X-Api-Key": salesforce_api_key,
+        }
+
+        # Create messages list
+        messages = []
+        messages.append({"role": "user", "content": prompt})
+
+        json_data = {
+            "prompts": messages,
+            "temperature": temperature,
+            "top_p": 1,
+            "max_tokens": max_tokens,
+        }
+
+        response = requests.post(
+            'https://gateway.salesforceresearch.ai/sfr-judge/process',
+            headers=headers,
+            json=json_data
+        )
+        response.raise_for_status()
+        return response.json()['result'][0]
+    except Exception as e:
+        return f"Error with Salesforce model {model_name}: {str(e)}"
+
 def get_model_response(
     model_name,
     model_info,
@@ -210,24 +240,25 @@ def get_model_response(
     api_model = model_info["api_model"]
     organization = model_info["organization"]
 
-    # Determine if model is Prometheus or Atla or Flow Judge
+    # Determine if model is Prometheus, Atla, Flow Judge, or Salesforce
     is_prometheus = (organization == "Prometheus")
     is_atla = (organization == "Atla")
     is_flow_judge = (organization == "Flow AI")
-    # For non-Prometheus/Atla models/Flow Judge, use the Judge system prompt
-    system_prompt = None if (is_prometheus or is_atla or is_flow_judge) else JUDGE_SYSTEM_PROMPT
+    is_salesforce = (organization == "Salesforce")  
+    
+    # For non-Prometheus/Atla/Flow Judge/Salesforce models, use the Judge system prompt
+    system_prompt = None if (is_prometheus or is_atla or is_flow_judge or is_salesforce) else JUDGE_SYSTEM_PROMPT
 
     # Select the appropriate base prompt
-
-    if is_atla:
+    if is_atla or is_salesforce:  # Use same prompt for Atla and Salesforce
         base_prompt = ATLA_PROMPT_WITH_REFERENCE if use_reference else ATLA_PROMPT
     elif is_flow_judge:
         base_prompt = FLOW_JUDGE_PROMPT
     else:
         base_prompt = PROMETHEUS_PROMPT_WITH_REFERENCE if use_reference else PROMETHEUS_PROMPT
     
-    # For non-Prometheus/non-Atla models, replace the specific instruction
-    if not (is_prometheus or is_atla or is_flow_judge):
+    # For non-Prometheus/non-Atla/non-Salesforce models, use Prometheus but replace the output format with JSON
+    if not (is_prometheus or is_atla or is_flow_judge or is_salesforce):
         base_prompt = base_prompt.replace(
             '3. The output format should look as follows: "Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)"',
             '3. Your output format should strictly adhere to JSON as follows: {{"feedback": "<write feedback>", "result": <numerical score>}}. Ensure the output is valid JSON, without additional formatting or explanations.'
@@ -247,7 +278,6 @@ def get_model_response(
                 score4_desc=prompt_data['score4_desc'],
                 score5_desc=prompt_data['score5_desc']
             )
-
         else:
             human_input = f"<user_input>\n{prompt_data['human_input']}\n</user_input>"
             ai_response = f"<response>\n{prompt_data['ai_response']}\n</response>"
@@ -300,8 +330,13 @@ def get_model_response(
             )
         elif organization == "Flow AI":
             return get_flow_judge_response(
-                api_model, final_prompt, # Keep default hps
+                api_model, final_prompt
             )
+        elif organization == "Salesforce":
+            response = get_salesforce_response(
+                api_model, final_prompt, system_prompt, max_tokens, temperature
+            )           
+            return response
         else:
             # All other organizations use Together API
             return get_together_response(
@@ -324,7 +359,12 @@ def parse_model_response(response):
             data = json.loads(response)
             return str(data.get("result", "N/A")), data.get("feedback", "N/A")
         except json.JSONDecodeError:
-            # If that fails (typically for smaller models), try to find JSON within the response
+            # If that fails, check if this is a Salesforce response (which uses ATLA format)
+            if "**Reasoning:**" in response or "**Result:**" in response:
+                # Use ATLA parser for Salesforce responses
+                return atla_parse_model_response(response)
+                
+            # Otherwise try to find JSON within the response
             json_match = re.search(r"{.*}", response, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group(0))
