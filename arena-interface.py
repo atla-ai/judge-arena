@@ -701,41 +701,9 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             'score5_desc': score5_description,
         }
 
-        # Get list of active models only for matches
-        active_models = [name for name, info in model_data.items() 
-                        if info.get("active", True)]
-        
-        # Define new models list
-        new_models = ["Atla-8B-preview", "Flow-Judge-0.1", "SFR-LLaMA-3.1-70B-Judge"]  # add "Flow-Judge-1.0" once ready
-        
-        if is_first_game:
-            # For the first game, ensure Salesforce model is one of the models to catch up on votes
-            salesforce_model = "SFR-LLaMA-3.1-70B-Judge"
-            other_models = [m for m in active_models if m != salesforce_model]
-            other_model = random.choice(other_models)
-            
-            # Randomly assign new model to either position A or B
-            if random.random() < 0.5:
-                model_a, model_b = salesforce_model, other_model
-            else:
-                model_a, model_b = other_model, salesforce_model
-        else:
-            # For subsequent games, new models appears 40% of the time
-            if random.random() < 0.4:
-                # Randomly choose between new models
-                new_model = random.choice(new_models)
-                other_models = [m for m in active_models if m not in new_models]
-                other_model = random.choice(other_models)
-                
-                if random.random() < 0.5:
-                    model_a, model_b = new_model, other_model
-                else:
-                    model_a, model_b = other_model, new_model
-            else:
-                # For other cases, exclude both Atla and Flow-Judge
-                non_special_models = [m for m in active_models if m not in new_models]
-                model1, model2 = random.sample(non_special_models, 2)
-                model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
+        # Always use Atla as model A and Salesforce as model B
+        model_a = "Atla-8B-preview"
+        model_b = "SFR-LLaMA-3.1-70B-Judge"
 
         # Get responses from models
         response_a = get_model_response(
