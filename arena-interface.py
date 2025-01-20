@@ -686,7 +686,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         score3_description,
         score4_description,
         score5_description,
-        is_first_game,  # Add state variable as input
+        is_first_game,
     ):
         # Build prompt data dictionary
         prompt_data = {
@@ -705,10 +705,12 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         active_models = [name for name, info in model_data.items() 
                         if info.get("active", True)]
         
-        atla_model = "Atla-8B-preview"
+        # Define new models list
+        new_models = ["Atla-8B-preview", "Flow-Judge-0.1", "SFR-LLaMA-3.1-70B-Judge"]  # add "Flow-Judge-1.0" once ready
         
         if is_first_game:
             # For the first game, ensure new model is one of the models to catch up on votes
+            atla_model = "Atla-8B-preview"
             other_models = [m for m in active_models if m != atla_model]
             other_model = random.choice(other_models)
             
@@ -721,8 +723,8 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             # For subsequent games, new models appears 40% of the time
             if random.random() < 0.4:
                 # Randomly choose between new models
-                new_model = random.choice(["Atla-8B-preview", "Flow-Judge-1.0"])
-                other_models = [m for m in active_models if m not in [new_model, "Atla-8B-preview", "Flow-Judge-1.0"]]
+                new_model = random.choice(new_models)
+                other_models = [m for m in active_models if m not in new_models]
                 other_model = random.choice(other_models)
                 
                 if random.random() < 0.5:
@@ -731,7 +733,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                     model_a, model_b = other_model, new_model
             else:
                 # For other cases, exclude both Atla and Flow-Judge
-                non_special_models = [m for m in active_models if m not in ["Atla-8B-preview", "Flow-Judge-1.0"]]
+                non_special_models = [m for m in active_models if m not in new_models]
                 model1, model2 = random.sample(non_special_models, 2)
                 model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
 
@@ -755,12 +757,14 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         is_atla_a = (model_data.get(model_a)['organization'] == 'Atla')
         is_atla_b = (model_data.get(model_b)['organization'] == 'Atla')
         is_flow_judge_a = (model_data.get(model_a)['organization'] == 'Flow AI')
-        is_flow_judge_b = (model_data.get(model_b)['organization'] == 'Flow AI')    
+        is_flow_judge_b = (model_data.get(model_b)['organization'] == 'Flow AI')
+        is_salesforce_a = (model_data.get(model_a)['organization'] == 'Salesforce')
+        is_salesforce_b = (model_data.get(model_b)['organization'] == 'Salesforce')
 
         if is_prometheus_a:
             score_a_val, critique_a_val = prometheus_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
-        elif is_atla_a:
+        elif is_atla_a or is_salesforce_a:  # Same parser for Atla and Salesforce
             score_a_val, critique_a_val = atla_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
         elif is_flow_judge_a:
@@ -773,7 +777,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         if is_prometheus_b:
             score_b_val, critique_b_val = prometheus_parse_model_response(response_b)
             score_b_val = f"{score_b_val} / 5"
-        elif is_atla_b:
+        elif is_atla_b or is_salesforce_b:  # Same parser for Atla and Salesforce
             score_b_val, critique_b_val = atla_parse_model_response(response_b)
             score_b_val = f"{score_b_val} / 5"
         elif is_flow_judge_b:

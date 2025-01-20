@@ -25,7 +25,10 @@ def add_vote(vote: Vote, db: Database) -> None:
 
 def get_votes(db: Database) -> List[Vote]:
     now = datetime.now(timezone.utc)
-    current_hour = now.replace(minute=0, second=0, microsecond=0)
-    votes = list(db.get_collection("votes").find({"timestamp": {"$lte": current_hour.isoformat()}}))
+    # Round down to nearest 10-second interval
+    current_interval = now.replace(microsecond=0, second=now.second - (now.second % 10))
+    votes = list(db.get_collection("votes").find({"timestamp": {"$lte": current_interval.isoformat()}}))
     return votes
 
+#     current_hour = now.replace(minute=0, second=0, microsecond=0)
+#    votes = list(db.get_collection("votes").find({"timestamp": {"$lte": current_hour.isoformat()}}))

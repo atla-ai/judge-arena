@@ -1,0 +1,27 @@
+Model,ELO Score,95% CI,# Votes,Organization,License
+Atla-8B-preview,1361,±51,235,Atla,Open Source
+Claude 3.5 Sonnet,1314,±42,346,Anthropic,Proprietary
+Prometheus-7b v2,1310,±93,70,Prometheus,Open Source
+Meta Llama 3.1 405B Instruct Turbo,1298,±39,403,Meta,Open Source
+QwQ 32B Preview,1294,±148,27,Qwen,Open Source
+Flow-Judge-v0.1,1276,±119,42,Flow AI,Open Source
+Qwen 2.5 72B Instruct Turbo,1250,±40,368,Alibaba,Open Source
+Claude 3 Opus,1229,±40,365,Anthropic,Proprietary
+Claude 3.5 Haiku,1229,±42,335,Anthropic,Proprietary
+GPT-4 Turbo,1203,±39,396,OpenAI,Proprietary
+SFR-LLaMA-3.1-70B-Judge,1200,±0,0,Salesforce,Proprietary
+Gemma 2 27B,1199,±41,355,Google,Open Source
+Qwen 2.5 7B Instruct Turbo,1191,±40,379,Alibaba,Open Source
+Gemma 2 9B,1183,±39,395,Google,Open Source
+GPT-4o,1182,±40,375,OpenAI,Proprietary
+Meta Llama 3.3 70B Instruct Turbo,1181,±143,29,Meta,Open Source
+Claude 3 Sonnet,1180,±40,374,Anthropic,Proprietary
+Meta Llama 3.1 8B Instruct Turbo,1158,±39,386,Meta,Open Source
+Mistral (7B) Instruct v0.3,1151,±41,362,Mistral AI,Open Source
+Claude 3 Haiku,1149,±41,359,Anthropic,Proprietary
+Qwen 2 Instruct (72B),1145,±41,362,Alibaba,Open Source
+Meta Llama 3.1 70B Instruct Turbo,1137,±40,380,Meta,Open Source
+Mistral (7B) Instruct v0.1,1124,±41,356,Mistral AI,Open Source
+Command-R Plus,1089,±69,128,Cohere,Proprietary
+GPT-3.5 Turbo,1086,±39,389,OpenAI,Proprietary
+Command-R,1068,±73,114,Cohere,Proprietary
