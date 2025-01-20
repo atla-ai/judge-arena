@@ -709,16 +709,16 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         new_models = ["Atla-8B-preview", "Flow-Judge-0.1", "SFR-LLaMA-3.1-70B-Judge"]  # add "Flow-Judge-1.0" once ready
         
         if is_first_game:
-            # For the first game, ensure new model is one of the models to catch up on votes
-            atla_model = "Atla-8B-preview"
-            other_models = [m for m in active_models if m != atla_model]
+            # For the first game, ensure Salesforce model is one of the models to catch up on votes
+            salesforce_model = "SFR-LLaMA-3.1-70B-Judge"
+            other_models = [m for m in active_models if m != salesforce_model]
             other_model = random.choice(other_models)
             
             # Randomly assign new model to either position A or B
             if random.random() < 0.5:
-                model_a, model_b = atla_model, other_model
+                model_a, model_b = salesforce_model, other_model
             else:
-                model_a, model_b = other_model, atla_model
+                model_a, model_b = other_model, salesforce_model
         else:
             # For subsequent games, new models appears 40% of the time
             if random.random() < 0.4:
