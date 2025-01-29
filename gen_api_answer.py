@@ -125,7 +125,7 @@ def get_atla_response(model_name, prompt, system_prompt=None, max_tokens=500, te
         messages.append({"role": "user", "content": prompt})
         
         # Apply chat template
-        model_id = "AtlaAI/Atla-8B-preview"
+        model_id = "AtlaAI/Selene-1-Mini-Llama-3.1-8B"
         tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_api_key)
         formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         
@@ -141,7 +141,7 @@ def get_atla_response(model_name, prompt, system_prompt=None, max_tokens=500, te
         }
         
         response = requests.post(
-            "https://azk0vbxyrc64s2v2.us-east-1.aws.endpoints.huggingface.cloud",
+            "https://bkp9p28gri93egqh.us-east-1.aws.endpoints.huggingface.cloud",
             headers=headers,
             json=payload
         )
