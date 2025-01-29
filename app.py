@@ -686,7 +686,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         score3_description,
         score4_description,
         score5_description,
-        is_first_game,
     ):
         # Build prompt data dictionary
         prompt_data = {
@@ -706,36 +705,24 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                         if info.get("active", True)]
         
         # Define new models list
-        new_models = ["Atla-8B-preview", "Flow-Judge-0.1", "SFR-LLaMA-3.1-70B-Judge"]  # add "Flow-Judge-1.0" once ready
+        new_models = ["Atla Selene 1 Mini", "Flow-Judge-0.1", "SFR-LLaMA-3.1-70B-Judge"]
         
-        if is_first_game:
-            # For the first game, ensure Salesforce model is one of the models to catch up on votes
-            salesforce_model = "SFR-LLaMA-3.1-70B-Judge"
-            other_models = [m for m in active_models if m != salesforce_model]
+        # New models appear 40% of the time
+        if random.random() < 0.4:
+            # Randomly choose between new models
+            new_model = random.choice(new_models)
+            other_models = [m for m in active_models if m not in new_models]
             other_model = random.choice(other_models)
             
-            # Randomly assign new model to either position A or B
             if random.random() < 0.5:
-                model_a, model_b = salesforce_model, other_model
+                model_a, model_b = new_model, other_model
             else:
-                model_a, model_b = other_model, salesforce_model
+                model_a, model_b = other_model, new_model
         else:
-            # For subsequent games, new models appears 40% of the time
-            if random.random() < 0.4:
-                # Randomly choose between new models
-                new_model = random.choice(new_models)
-                other_models = [m for m in active_models if m not in new_models]
-                other_model = random.choice(other_models)
-                
-                if random.random() < 0.5:
-                    model_a, model_b = new_model, other_model
-                else:
-                    model_a, model_b = other_model, new_model
-            else:
-                # For other cases, exclude both Atla and Flow-Judge
-                non_special_models = [m for m in active_models if m not in new_models]
-                model1, model2 = random.sample(non_special_models, 2)
-                model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
+            # For other cases, exclude new models
+            non_special_models = [m for m in active_models if m not in new_models]
+            model1, model2 = random.sample(non_special_models, 2)
+            model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
 
         # Get responses from models
         response_a = get_model_response(
@@ -811,7 +798,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         
         def handler(*args):
             nonlocal first_game
-            result = submit_and_store(*args, first_game)
+            result = submit_and_store(*args)
             first_game = False  # Set to False after first submission
             return result
         
@@ -831,7 +818,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             score3_description,
             score4_description,
             score5_description,
-            first_game_state,  # Add first_game_state as input
         ],
         outputs=[
             score_a,
@@ -848,7 +834,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_b,
             send_btn,
             random_btn,
-            first_game_state,  # Add first_game_state as output
         ],
     )
 
