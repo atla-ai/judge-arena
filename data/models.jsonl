@@ -16,11 +16,12 @@
 {"name": "Mistral (7B) Instruct v0.1", "organization": "Mistral AI", "license": "Open Source", "api_model": "mistralai/Mistral-7B-Instruct-v0.1", "active": true}
 {"name": "Claude 3.5 Sonnet", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-sonnet-latest", "active": true}
 {"name": "Claude 3.5 Haiku", "organization": "Anthropic", "license": "Proprietary", "api_model": "claude-3-5-haiku-latest", "active": true}
-{"name": "Prometheus-7b v2", "organization": "Prometheus", "license": "Open Source", "api_model": "prometheus/prometheus-7b-v2", "active": true}
+{"name": "Prometheus-7b v2", "organization": "Prometheus", "license": "Open Source", "api_model": "prometheus/prometheus-7b-v2", "active": false}
 {"name": "Command-R", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r", "active": true}
 {"name": "Command-R Plus", "organization": "Cohere", "license": "Proprietary", "api_model": "command-r-plus", "active": true}
-{"name": "Atla-8B-preview", "organization": "Atla", "license": "Open Source", "api_model": "Atla-8B-preview", "active": true}
+{"name": "Atla-8B-preview", "organization": "Atla", "license": "Open Source", "api_model": "Atla-8B-preview", "active": false}
 {"name": "Meta Llama 3.3 70B Instruct Turbo", "organization": "Meta", "license": "Open Source", "api_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "active": true}
 {"name": "QwQ 32B Preview", "organization": "Qwen", "license": "Open Source", "api_model": "Qwen/QwQ-32B-Preview", "active": true}
 {"name": "Flow-Judge-v0.1", "organization": "Flow AI", "license": "Open Source", "api_model": "Flow-Judge-v0.1-4.65bpw-exl2", "active": true}
 {"name": "SFR-LLaMA-3.1-70B-Judge", "organization": "Salesforce", "license": "Proprietary", "api_model": "sfr-llama-3.1-70b-judge", "active": true}
+{"name": "Atla Selene 1 Mini", "organization": "Atla", "license": "Open Source", "api_model": "Atla-Selene-Mini", "active": true}
