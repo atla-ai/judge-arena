@@ -738,16 +738,17 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             use_reference=use_reference
         )
 
-        # Parse the responses based on model, using appropriate parsing for different models
-        is_prometheus_a = (model_data.get(model_a)['organization'] == 'Prometheus')
-        is_prometheus_b = (model_data.get(model_b)['organization'] == 'Prometheus')
-        is_atla_a = (model_data.get(model_a)['organization'] == 'Atla')
-        is_atla_b = (model_data.get(model_b)['organization'] == 'Atla')
-        is_flow_judge_a = (model_data.get(model_a)['organization'] == 'Flow AI')
-        is_flow_judge_b = (model_data.get(model_b)['organization'] == 'Flow AI')
-        is_salesforce_a = (model_data.get(model_a)['organization'] == 'Salesforce')
-        is_salesforce_b = (model_data.get(model_b)['organization'] == 'Salesforce')
+        
+        is_prometheus_a = model_data.get(model_a, {}).get('organization') == 'Prometheus'
+        is_prometheus_b = model_data.get(model_b, {}).get('organization') == 'Prometheus'
+        is_atla_a = model_data.get(model_a, {}).get('organization') == 'Atla'
+        is_atla_b = model_data.get(model_b, {}).get('organization') == 'Atla'
+        is_flow_judge_a = model_data.get(model_a, {}).get('organization') == 'Flow AI'
+        is_flow_judge_b = model_data.get(model_b, {}).get('organization') == 'Flow AI'
+        is_salesforce_a = model_data.get(model_a, {}).get('organization') == 'Salesforce'
+        is_salesforce_b = model_data.get(model_b, {}).get('organization') == 'Salesforce'
 
+        # Parse the responses based on model, using appropriate parsing for different models
         if is_prometheus_a:
             score_a_val, critique_a_val = prometheus_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
