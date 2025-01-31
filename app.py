@@ -73,6 +73,7 @@ def load_model_data():
                     "organization": model["organization"],
                     "license": model["license"],
                     "api_model": model["api_model"],
+                    "active": model["active"]  
                 }
     except FileNotFoundError:
         print("Warning: models.jsonl not found")
@@ -702,10 +703,10 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
         # Get list of active models only for matches
         active_models = [name for name, info in model_data.items() 
-                        if info.get("active", True)]
+                        if info.get("active", True) is True]  # Explicitly check for True
         
         # Define new models list
-        new_models = ["Atla Selene 1 Mini", "Flow-Judge-0.1", "SFR-LLaMA-3.1-70B-Judge"]
+        new_models = ["Atla Selene 1 Mini", "SFR-LLaMA-3.1-70B-Judge"]
         
         # New models appear 40% of the time
         if random.random() < 0.4:
