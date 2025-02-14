@@ -73,6 +73,7 @@ def load_model_data():
                     "organization": model["organization"],
                     "license": model["license"],
                     "api_model": model["api_model"],
+                    "active": model["active"]  
                 }
     except FileNotFoundError:
         print("Warning: models.jsonl not found")
@@ -686,7 +687,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         score3_description,
         score4_description,
         score5_description,
-        is_first_game,
     ):
         # Build prompt data dictionary
         prompt_data = {
@@ -703,39 +703,27 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
 
         # Get list of active models only for matches
         active_models = [name for name, info in model_data.items() 
-                        if info.get("active", True)]
+                        if info.get("active", True) is True]  # Explicitly check for True
         
         # Define new models list
-        new_models = ["Atla-8B-preview", "Flow-Judge-0.1", "SFR-LLaMA-3.1-70B-Judge"]  # add "Flow-Judge-1.0" once ready
+        new_models = ["Atla Selene 1 Mini", "SFR-LLaMA-3.1-70B-Judge"]
         
-        if is_first_game:
-            # For the first game, ensure new model is one of the models to catch up on votes
-            atla_model = "Atla-8B-preview"
-            other_models = [m for m in active_models if m != atla_model]
+        # New models appear 40% of the time
+        if random.random() < 0.4:
+            # Randomly choose between new models
+            new_model = random.choice(new_models)
+            other_models = [m for m in active_models if m not in new_models]
             other_model = random.choice(other_models)
             
-            # Randomly assign new model to either position A or B
             if random.random() < 0.5:
-                model_a, model_b = atla_model, other_model
+                model_a, model_b = new_model, other_model
             else:
-                model_a, model_b = other_model, atla_model
+                model_a, model_b = other_model, new_model
         else:
-            # For subsequent games, new models appears 40% of the time
-            if random.random() < 0.4:
-                # Randomly choose between new models
-                new_model = random.choice(new_models)
-                other_models = [m for m in active_models if m not in new_models]
-                other_model = random.choice(other_models)
-                
-                if random.random() < 0.5:
-                    model_a, model_b = new_model, other_model
-                else:
-                    model_a, model_b = other_model, new_model
-            else:
-                # For other cases, exclude both Atla and Flow-Judge
-                non_special_models = [m for m in active_models if m not in new_models]
-                model1, model2 = random.sample(non_special_models, 2)
-                model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
+            # For other cases, exclude new models
+            non_special_models = [m for m in active_models if m not in new_models]
+            model1, model2 = random.sample(non_special_models, 2)
+            model_a, model_b = (model1, model2) if random.random() < 0.5 else (model2, model1)
 
         # Get responses from models
         response_a = get_model_response(
@@ -751,16 +739,17 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             use_reference=use_reference
         )
 
-        # Parse the responses based on model, using appropriate parsing for different models
-        is_prometheus_a = (model_data.get(model_a)['organization'] == 'Prometheus')
-        is_prometheus_b = (model_data.get(model_b)['organization'] == 'Prometheus')
-        is_atla_a = (model_data.get(model_a)['organization'] == 'Atla')
-        is_atla_b = (model_data.get(model_b)['organization'] == 'Atla')
-        is_flow_judge_a = (model_data.get(model_a)['organization'] == 'Flow AI')
-        is_flow_judge_b = (model_data.get(model_b)['organization'] == 'Flow AI')
-        is_salesforce_a = (model_data.get(model_a)['organization'] == 'Salesforce')
-        is_salesforce_b = (model_data.get(model_b)['organization'] == 'Salesforce')
+        
+        is_prometheus_a = model_data.get(model_a, {}).get('organization') == 'Prometheus'
+        is_prometheus_b = model_data.get(model_b, {}).get('organization') == 'Prometheus'
+        is_atla_a = model_data.get(model_a, {}).get('organization') == 'Atla'
+        is_atla_b = model_data.get(model_b, {}).get('organization') == 'Atla'
+        is_flow_judge_a = model_data.get(model_a, {}).get('organization') == 'Flow AI'
+        is_flow_judge_b = model_data.get(model_b, {}).get('organization') == 'Flow AI'
+        is_salesforce_a = model_data.get(model_a, {}).get('organization') == 'Salesforce'
+        is_salesforce_b = model_data.get(model_b, {}).get('organization') == 'Salesforce'
 
+        # Parse the responses based on model, using appropriate parsing for different models
         if is_prometheus_a:
             score_a_val, critique_a_val = prometheus_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
@@ -811,7 +800,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         
         def handler(*args):
             nonlocal first_game
-            result = submit_and_store(*args, first_game)
+            result = submit_and_store(*args)
             first_game = False  # Set to False after first submission
             return result
         
@@ -831,7 +820,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             score3_description,
             score4_description,
             score5_description,
-            first_game_state,  # Add first_game_state as input
         ],
         outputs=[
             score_a,
@@ -848,7 +836,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
             model_name_b,
             send_btn,
             random_btn,
-            first_game_state,  # Add first_game_state as output
         ],
     )
 
