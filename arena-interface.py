@@ -13,7 +13,7 @@ from gen_api_answer import (
     get_model_response, 
     parse_model_response,
     prometheus_parse_model_response,
-    atla_parse_model_response,
+    salesforce_parse_model_response,
     flow_judge_parse_model_response
 )
 
@@ -706,7 +706,7 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
                         if info.get("active", True) is True]  # Explicitly check for True
         
         # Define new models list
-        new_models = ["Atla Selene 1 Mini", "SFR-LLaMA-3.1-70B-Judge"]
+        new_models = ["Atla Selene 1", "SFR-LLaMA-3.1-70B-Judge"]
         
         # New models appear 40% of the time
         if random.random() < 0.4:
@@ -742,8 +742,6 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         
         is_prometheus_a = model_data.get(model_a, {}).get('organization') == 'Prometheus'
         is_prometheus_b = model_data.get(model_b, {}).get('organization') == 'Prometheus'
-        is_atla_a = model_data.get(model_a, {}).get('organization') == 'Atla'
-        is_atla_b = model_data.get(model_b, {}).get('organization') == 'Atla'
         is_flow_judge_a = model_data.get(model_a, {}).get('organization') == 'Flow AI'
         is_flow_judge_b = model_data.get(model_b, {}).get('organization') == 'Flow AI'
         is_salesforce_a = model_data.get(model_a, {}).get('organization') == 'Salesforce'
@@ -753,8 +751,8 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         if is_prometheus_a:
             score_a_val, critique_a_val = prometheus_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
-        elif is_atla_a or is_salesforce_a:  # Same parser for Atla and Salesforce
-            score_a_val, critique_a_val = atla_parse_model_response(response_a)
+        elif is_salesforce_a:  # Same parser for Atla and Salesforce
+            score_a_val, critique_a_val = salesforce_parse_model_response(response_a)
             score_a_val = f"{score_a_val} / 5"
         elif is_flow_judge_a:
             score_a_val, critique_a_val = flow_judge_parse_model_response(response_a)
@@ -766,8 +764,8 @@ with gr.Blocks(theme="default", css=CSS_STYLES) as demo:
         if is_prometheus_b:
             score_b_val, critique_b_val = prometheus_parse_model_response(response_b)
             score_b_val = f"{score_b_val} / 5"
-        elif is_atla_b or is_salesforce_b:  # Same parser for Atla and Salesforce
-            score_b_val, critique_b_val = atla_parse_model_response(response_b)
+        elif is_salesforce_b:  # Same parser for Atla and Salesforce
+            score_b_val, critique_b_val = salesforce_parse_model_response(response_b)
             score_b_val = f"{score_b_val} / 5"
         elif is_flow_judge_b:
             score_b_val, critique_b_val = flow_judge_parse_model_response(response_b)
