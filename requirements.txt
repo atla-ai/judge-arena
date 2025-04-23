@@ -1,3 +1,4 @@
+atla
 pymongo
 gradio
 python-dotenv
