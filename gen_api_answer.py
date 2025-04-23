@@ -15,6 +15,7 @@ from prompts import (
      FLOW_JUDGE_PROMPT
 )
 from transformers import AutoTokenizer
+from atla import Atla
 
 # Initialize clients
 anthropic_client = anthropic.Anthropic()
@@ -24,6 +25,10 @@ hf_api_key = os.getenv("HF_API_KEY")
 flow_judge_api_key = os.getenv("FLOW_JUDGE_API_KEY")
 cohere_client = cohere.ClientV2(os.getenv("CO_API_KEY"))
 salesforce_api_key = os.getenv("SALESFORCE_API_KEY")
+
+# Initialize Atla client
+atla_client = Atla()
+
 def get_openai_response(model_name, prompt, system_prompt=JUDGE_SYSTEM_PROMPT, max_tokens=500, temperature=0):
     """Get response from OpenAI API"""
     try:
@@ -110,42 +115,33 @@ def get_prometheus_response(model_name, prompt, system_prompt=None, max_tokens=5
         return f"Error with Hugging Face model {model_name}: {str(e)}"
 
 def get_atla_response(model_name, prompt, system_prompt=None, max_tokens=500, temperature=0.01):
-    """Get response from HF endpoint for Atla model"""
+    """Get response from Atla API"""
     try:
-        headers = {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {hf_api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        # Create messages list for chat template
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
-        
-        # Apply chat template
-        model_id = "AtlaAI/Selene-1-Mini-Llama-3.1-8B"
-        tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_api_key)
-        formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        
-        payload = {
-            "inputs": formatted_prompt,
-            "parameters": {
-                "max_new_tokens": max_tokens,
-                "return_full_text": False,
-                "temperature": temperature,
-                "seed": 42,
-                "add_generation_prompt": True
-            }
-        }
-        
-        response = requests.post(
-            "https://bkp9p28gri93egqh.us-east-1.aws.endpoints.huggingface.cloud",
-            headers=headers,
-            json=payload
+        # Extract components from the prompt data
+        model_input = prompt.get('human_input', '')
+        model_output = prompt.get('ai_response', '')
+        expected_output = prompt.get('ground_truth_input', '')
+        evaluation_criteria = prompt.get('eval_criteria', '')
+
+        # Set model_id based on the model name
+        if "Mini" in model_name:
+            model_id = "atla-selene-mini"
+        else:
+            model_id = "atla-selene"
+
+        response = atla_client.evaluation.create(
+            model_id=model_id,
+            model_input=model_input,
+            model_output=model_output,
+            expected_model_output=expected_output if expected_output else None,
+            evaluation_criteria=evaluation_criteria,
         )
-        return response.json()[0]["generated_text"]
+        
+        # Return the score and critique directly
+        return {
+            "score": response.result.evaluation.score,
+            "critique": response.result.evaluation.critique
+        }
     except Exception as e:
         return f"Error with Atla model {model_name}: {str(e)}"
 
@@ -321,9 +317,16 @@ def get_model_response(
                 api_model, final_prompt, system_prompt, max_tokens, temperature = 0.01
             )
         elif organization == "Atla":
-            return get_atla_response(
-                api_model, final_prompt, system_prompt, max_tokens, temperature = 0.01
+            response = get_atla_response(
+                api_model, prompt_data, system_prompt, max_tokens, temperature
             )
+            # Response now contains score and critique directly
+            if isinstance(response, dict) and 'score' in response and 'critique' in response:
+                score = str(response['score'])
+                critique = response['critique']
+                return score, critique
+            else:
+                return "Error", str(response)
         elif organization == "Cohere":
             return get_cohere_response(
                 api_model, final_prompt, system_prompt, max_tokens, temperature
@@ -350,6 +353,10 @@ def parse_model_response(response):
         # Debug print
         print(f"Raw model response: {response}")
 
+        # If response is already a tuple (from Atla/Salesforce), use it directly
+        if isinstance(response, tuple):
+            return response
+
         # If response is already a dictionary, use it directly
         if isinstance(response, dict):
             return str(response.get("result", "N/A")), response.get("feedback", "N/A")
@@ -359,10 +366,10 @@ def parse_model_response(response):
             data = json.loads(response)
             return str(data.get("result", "N/A")), data.get("feedback", "N/A")
         except json.JSONDecodeError:
-            # If that fails, check if this is a Salesforce response (which uses ATLA format)
+            # If that fails, check if this is a Salesforce response
             if "**Reasoning:**" in response or "**Result:**" in response:
-                # Use ATLA parser for Salesforce responses
-                return atla_parse_model_response(response)
+                # Use ATLA parser for Salesforce responses only
+                return salesforce_parse_model_response(response)
                 
             # Otherwise try to find JSON within the response
             json_match = re.search(r"{.*}", response, re.DOTALL)
@@ -443,10 +450,10 @@ def prometheus_parse_model_response(output):
         print(f"Failed to parse response: {str(e)}")
         return "Error", f"Exception during parsing: {str(e)}"
 
-def atla_parse_model_response(output):
-    """Parse response from ATLA model"""
+def salesforce_parse_model_response(output):
+    """Parse response from Salesforce model"""
     try:
-        print(f"Raw Atla model response: {output}")
+        print(f"Raw Salesforce model response: {output}")
         output = output.strip()
         
         # Look for the Reasoning and Result sections
@@ -458,10 +465,10 @@ def atla_parse_model_response(output):
             score = result_match.group(1)
             return str(score), feedback
             
-        return "Error", f"Failed to parse ATLA response format: {output}"
+        return "Error", f"Failed to parse Salesforce response format: {output}"
 
     except Exception as e:
-        print(f"Failed to parse ATLA response: {str(e)}")
+        print(f"Failed to parse Salesforce response: {str(e)}")
         return "Error", f"Exception during parsing: {str(e)}"
     
 def flow_judge_parse_model_response(output):
